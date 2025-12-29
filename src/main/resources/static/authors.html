@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authors Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/authors.js" type="module"></script>
+</head>
+<body>
+    <header>
+        <h1>Authors Management</h1>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="books.html">Books</a></li>
+            <li><a href="authors.html">Authors</a></li>
+            <li><a href="users.html">Users</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="side-nav">
+                <h3>Author Actions</h3>
+                <button id="show-all-authors" class="side-button">Show All Authors</button>
+                <button id="show-create-author-form" class="side-button">Create New Author</button>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div id="action-forms" class="hidden">
+                <form id="create-author-form" novalidate>
+                    <h3>Create New Author</h3>
+                    <label for="create-author-name">Name:</label>
+                    <input type="text" id="create-author-name" required>
+                    <label for="create-author-birthdate">Birthdate:</label>
+                    <input type="text" id="create-author-birthdate" required placeholder="YYYY-MM-DD" onfocus="(this.type='date'); this.max=new Date().toISOString().split('T')[0]" onblur="if(!this.value)this.type='text'">
+                    <button id="create-button">Create</button>
+                    <button id="cancel-button" type="button">Cancel</button>
+                </form>
+            </div>
+            <hr id="results-separator" >
+            <h2>Results</h2>
+            <ul id="authors-list"></ul>
+        </main>
+    </div>
+    <footer>
+        <p>&copy; 2025 Book Management Application</p>
+    </footer>
+
+    <!-- Generic Modal -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+</body>
+</html>

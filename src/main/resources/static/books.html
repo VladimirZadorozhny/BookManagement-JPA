@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Books Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/books.js" type="module"></script>
+</head>
+<body>
+    <header>
+        <h1>Books Management</h1>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="books.html">Books</a></li>
+            <li><a href="authors.html">Authors</a></li>
+            <li><a href="users.html">Users</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="side-nav">
+                <h3>Book Actions</h3>
+                <div class="dropdown">
+                    <button class="dropbtn">Find Books</button>
+                    <div class="dropdown-content">
+                        <a href="#" id="show-all">Show All</a>
+                        <a href="#" id="show-available">Show Available Only</a>
+                        <a href="#" id="show-by-year">By Year</a>
+                        <a href="#" id="show-by-author">By Author Name</a>
+                        <a href="#" id="show-by-title">By Title</a>
+                    </div>
+                </div>
+                <button id="show-create-form" class="side-button">Create New Book</button>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div id="action-forms">
+                <!-- Static Create Book Form -->
+                <form id="create-book-form-static" novalidate class="hidden">
+                    <h3>Create New Book</h3>
+                    <div class="form-field-group">
+                        <label for="create-book-title">Title:</label>
+                        <input type="text" id="create-book-title" required>
+                    </div>
+                    <div class="form-field-group">
+                        <label for="create-book-year">Year:</label>
+                        <input type="number" id="create-book-year" required>
+                    </div>
+                    <div class="form-field-group">
+                        <label for="create-book-author-id">Author ID:</label>
+                        <input type="number" id="create-book-author-id" required>
+                    </div>
+                    <div class="form-field-group">
+                        <label for="create-book-available">Available Count:</label>
+                        <input type="number" id="create-book-available" required min="0">
+                    </div>
+                    <button type="submit" class="side-button">Create</button>
+                    <button type="button" id="cancel-create-book" class="side-button">Cancel</button>
+                </form>
+
+                <!-- Static Find Book Form -->
+                <form id="find-book-form-static" novalidate class="hidden">
+                    <h3 id="find-book-title">Find Book</h3>
+                    <div class="form-field-group">
+                        <label for="search-book-input" id="search-book-label"></label>
+                        <input type="text" id="search-book-input" required>
+                    </div>
+                    <button type="submit" id="search-book-button" class="side-button">Search</button>
+                    <button type="button" id="cancel-search-book" class="side-button">Cancel</button>
+                </form>
+            </div>
+            <hr id="results-separator">
+            <h2>Results</h2>
+            <ul id="books-list"></ul>
+        </main>
+    </div>
+    <footer>
+        <p>&copy; 2025 Book Management Application</p>
+    </footer>
+
+    <!-- Generic Modal -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Details</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/book.js" type="module"></script>
+</head>
+<body>
+    <header>
+        <h1>Book Details</h1>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="books.html">Books</a></li>
+            <li><a href="authors.html">Authors</a></li>
+            <li><a href="users.html">Users</a></li>
+        </ul>
+    </nav>
+    <main class="centered-main">
+        <div id="static-details">
+            <p><strong>Title:</strong> <span id="title"></span></p>
+            <p><strong>Author:</strong> <span id="author"></span></p>
+            <p><strong>Year:</strong> <span id="year"></span></p>
+            <p><strong>Available:</strong> <span id="available"></span></p>
+            <button id="edit-button" type="button" class="side-button">Edit</button>
+            <button id="delete-button" type="button" class="side-button">Delete</button>
+            <button id="rent-this-book-button" type="button" class="side-button">Rent this Book</button>
+        </div>
+
+        <div id="edit-form-container" class="hidden">
+            <h2>Edit Book</h2>
+            <form id="edit-book-form" novalidate>
+                <div>
+                    <label for="edit-title">Title:</label>
+                    <input type="text" id="edit-title" required>
+                </div>
+                <div>
+                    <label for="edit-year">Year:</label>
+                    <input type="number" id="edit-year" required>
+                </div>
+                <div>
+                    <label for="edit-authorId">Author ID:</label>
+                    <input type="number" id="edit-authorId" required>
+                </div>
+                <div>
+                    <label for="edit-available">Available Count:</label>
+                    <input type="number" id="edit-available" required min="0">
+                </div>
+                <button id="save-button" type="submit" class="side-button">Save</button>
+                <button id="cancel-button" type="button" class="side-button">Cancel</button>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2025 Book Management Application</p>
+    </footer>
+
+    <!-- Generic Modal -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+</body>
+</html>

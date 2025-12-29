@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users Management</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/users.js" type="module"></script>
+</head>
+<body>
+    <header>
+        <h1>Users Management</h1>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="books.html">Books</a></li>
+            <li><a href="authors.html">Authors</a></li>
+            <li><a href="users.html">Users</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="side-nav" id="user-sidebar-nav">
+                <h3>User Actions</h3>
+                <button id="show-all-users" class="side-button">Show All Users</button>
+                <div class="dropdown">
+                    <button class="dropbtn">Find User</button>
+                    <div class="dropdown-content">
+                        <a href="#" id="show-by-id">By ID</a>
+                        <a href="#" id="show-by-name-email">By Name or Email</a>
+                    </div>
+                </div>
+                <button id="show-create-user-form" class="side-button">Create New User</button>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div id="action-forms">
+                <!-- Static Create User Form -->
+                <form id="create-user-form-static" novalidate class="hidden">
+                    <h3>Create New User</h3>
+                    <div class="form-field-group">
+                        <label for="create-user-name">Name:</label>
+                        <input type="text" id="create-user-name" required>
+                    </div>
+                    <div class="form-field-group">
+                        <label for="create-user-email">Email:</label>
+                        <input type="email" id="create-user-email" required>
+                    </div>
+                    <button type="submit" class="side-button">Create</button>
+                    <button type="button" id="cancel-create-user" class="side-button">Cancel</button>
+                </form>
+
+                <!-- Static Find User Form -->
+                <form id="find-user-form-static" novalidate class="hidden">
+                    <h3 id="find-user-title">Find User</h3>
+                    <div class="form-field-group">
+                        <label for="search-user-input" id="search-user-label"></label>
+                        <input type="text" id="search-user-input" required>
+                    </div>
+                    <button type="submit" id="search-user-button" class="side-button">Search</button>
+                    <button type="button" id="cancel-search-user" class="side-button">Cancel</button>
+                </form>
+
+            </div>
+            <hr id="results-separator">
+            <h2>Results</h2>
+            <ul id="users-list"></ul>
+        </main>
+    </div>
+    <footer>
+        <p>&copy; 2025 Book Management Application</p>
+    </footer>
+
+    <!-- Generic Modal -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+</body>
+</html>

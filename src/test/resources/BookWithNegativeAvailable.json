@@ -1,0 +1,6 @@
+{
+    "title": "Book With Negative Available",
+    "year": 2020,
+    "authorId": 1,
+    "available": -5
+}
