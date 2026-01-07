@@ -1,6 +1,7 @@
 package org.mystudying.bookmanagementjpa.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -27,17 +28,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.hamcrest.Matchers.containsString;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
 @Sql("/insertTestRecords.sql")
+
 public class UserControllerTest {
 
     private static final String USERS_TABLE = "users";
@@ -49,11 +50,13 @@ public class UserControllerTest {
     private final MockMvc mockMvc;
     private final JdbcClient jdbcClient;
     private final TransactionTemplate txTemplate;
+    private final EntityManager entityManager;
 
-    public UserControllerTest(MockMvc mockMvc, JdbcClient jdbcClient, PlatformTransactionManager txManager) {
+    public UserControllerTest(MockMvc mockMvc, JdbcClient jdbcClient, PlatformTransactionManager txManager, EntityManager entityManager) {
         this.mockMvc = mockMvc;
         this.jdbcClient = jdbcClient;
         this.txTemplate = new TransactionTemplate(txManager);
+        this.entityManager = entityManager;
     }
 
     private long idOfTestUser1() {
@@ -85,7 +88,7 @@ public class UserControllerTest {
                 .query(Long.class)
                 .single();
     }
-    
+
     private long idOfRentableBook() {
         return jdbcClient.sql("SELECT id FROM books WHERE title = 'Rentable Book'")
                 .query(Long.class)
@@ -181,26 +184,31 @@ public class UserControllerTest {
     void createUserReturnsCreatedUser() throws Exception {
         long initialRowCount = JdbcTestUtils.countRowsInTable(jdbcClient, USERS_TABLE);
         String newUserJson = readJsonFile("correctUser.json");
+        long lastId = jdbcClient.sql("select max(id) from users")
+                .query(Long.class)
+                .single();
 
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newUserJson))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.id").value(lastId + 1))
                 .andExpect(jsonPath("$.name").value("New User From Test"))
                 .andExpect(jsonPath("$.email").value("new.test@example.com"));
 
+//        we already can check DB without flushing due the forced flush by creation and strategy = GenerationType.IDENTITY
         assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, USERS_TABLE, "email = 'new.test@example.com'")).isEqualTo(1);
         assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, USERS_TABLE)).isEqualTo(initialRowCount + 1);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "UserWithEmptyName.json",
-        "UserWithoutName.json",
-        "UserWithEmptyEmail.json",
-        "UserWithoutEmail.json",
-        "UserWithInvalidEmail.json"
+            "UserWithEmptyName.json",
+            "UserWithoutName.json",
+            "UserWithEmptyEmail.json",
+            "UserWithoutEmail.json",
+            "UserWithInvalidEmail.json"
     })
     void createUserReturnsBadRequestForInvalidData(String fileName) throws Exception {
         String invalidUserJson = readJsonFile(fileName);
@@ -237,7 +245,8 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value("Updated User Name"))
                 .andExpect(jsonPath("$.email").value("updated.user@example.com"));
-        
+
+//        we already can check DB without flushing due "saveAndFlush" in Service class
         assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, USERS_TABLE, "id = " + id + " AND email = 'updated.user@example.com'")).isEqualTo(1);
     }
 
@@ -266,6 +275,15 @@ public class UserControllerTest {
                         .content(duplicateEmailJson))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value(containsString("Email already exists: test2@example.com")));
+
+//        we already can check DB without flushing due "saveAndFlush" in Service class
+        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, USERS_TABLE, "email = 'test1@example.com' and id = " + id)).isEqualTo(1);
+
+//        force to detach all Entities, and also the one that keep old incorrect data from update attempt and to re-read from DB
+        entityManager.clear();
+        mockMvc.perform(get("/api/users/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test1@example.com"));
     }
 
 
@@ -273,10 +291,19 @@ public class UserControllerTest {
     void deleteUserReturnsNoContent() throws Exception {
         long id = idOfUserForDeletion();
         long initialRowCount = JdbcTestUtils.countRowsInTable(jdbcClient, USERS_TABLE);
-        
+
         mockMvc.perform(delete("/api/users/{id}", id))
                 .andExpect(status().isNoContent());
-        
+
+        mockMvc.perform(get("/api/users/{id}", id))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(initialRowCount - 1));
+
+//        extra test to see the changes in DB
+        entityManager.flush();
         assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, USERS_TABLE)).isEqualTo(initialRowCount - 1);
         assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, USERS_TABLE, "id = " + id)).isEqualTo(0);
     }
@@ -293,8 +320,9 @@ public class UserControllerTest {
         long rentUserId = idOfRentUser();
         long rentableBookId = idOfRentableBook();
         long initialBookings = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE);
+        long initialBooksByUser = JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE, "user_id = " + rentUserId);
         int initialAvailable = jdbcClient.sql("SELECT available FROM books WHERE id = ?").param(rentableBookId).query(Integer.class).single();
-        
+
         String rentRequestJson = readJsonFile("rentOrReturnBookRequest.json").replace("1", String.valueOf(rentableBookId));
 
         mockMvc.perform(post("/api/users/{userId}/rent", rentUserId)
@@ -302,10 +330,22 @@ public class UserControllerTest {
                         .content(rentRequestJson))
                 .andExpect(status().isNoContent());
 
+        mockMvc.perform(get("/api/users/{id}/books", rentUserId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(initialBooksByUser + 1))
+                .andExpect(jsonPath("$[*]").value(hasSize((int)initialBooksByUser + 1)))
+                        .andExpect(jsonPath("$[*].id").value(hasItem((int)rentableBookId)));
+
+        mockMvc.perform(get("/api/books/{id}", rentableBookId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(initialAvailable - 1));
+
+//         extra test to see the changes in DB
+        entityManager.flush();
         assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE)).isEqualTo(initialBookings + 1);
-        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE, 
-            "user_id = " + rentUserId + " AND book_id = " + rentableBookId)).isEqualTo(1);
-        // Verify book available count decreased
+        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE,
+                "user_id = " + rentUserId + " AND book_id = " + rentableBookId)).isEqualTo(1);
+        // Verify book available count decreased in DB
         assertThat(jdbcClient.sql("SELECT available FROM books WHERE id = ?").param(rentableBookId).query(Integer.class).single()).isEqualTo(initialAvailable - 1);
     }
 
@@ -345,7 +385,7 @@ public class UserControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value(containsString("Book is already borrowed by this user.")));
     }
-    
+
     @Test
     void rentBookReturnsConflictForUnavailableBook() throws Exception {
         long rentUserId = idOfRentUser();
@@ -371,19 +411,43 @@ public class UserControllerTest {
                         .content(rentRequestJson))
                 .andExpect(status().isNoContent());
 
-        long initialBookings = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE);
+        MvcResult resultRentedBook = mockMvc.perform(get("/api/books/{id}", rentableBookId))
+                .andExpect(status().isOk())
+                .andReturn();
+        String jsonResponse = resultRentedBook.getResponse().getContentAsString();
+        int initialAvailable = JsonPath.read(jsonResponse, "$.available");
+
+        MvcResult resultBooksByUser = mockMvc.perform(get("/api/users/{id}/books", rentUserId))
+                .andExpect(status().isOk())
+                .andReturn();
+        String jsonBooksByUser = resultBooksByUser.getResponse().getContentAsString();
+        int booksByUser = JsonPath.read(jsonBooksByUser, "$.length()");
+
+//    If our POST request have passed - the rent method is successed and booking was created, but we don't see it in DB yet until transaction ends,
+//        that's why we make artificially "+1" to amount of bookings from DB without flushing, just for testing
+        int initialBookings = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE) + 1;
+
         String returnRequestJson = readJsonFile("rentOrReturnBookRequest.json").replace("1", String.valueOf(rentableBookId));
-        int initialAvailable = jdbcClient.sql("SELECT available FROM books WHERE id = ?").param(rentableBookId).query(Integer.class).single();
 
         mockMvc.perform(post("/api/users/{userId}/return", rentUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(returnRequestJson))
                 .andExpect(status().isNoContent());
-        
-        assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE)).isEqualTo(initialBookings - 1);
-        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE, 
-            "user_id = " + rentUserId + " AND book_id = " + rentableBookId)).isEqualTo(0);
 
+        mockMvc.perform(get("/api/books/{id}", rentableBookId))
+                .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.available").value(initialAvailable + 1));
+
+        mockMvc.perform(get("/api/users/{id}/books", rentUserId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(booksByUser - 1))
+                .andExpect(jsonPath("$[?(@.id == " + rentableBookId + ")]").isEmpty());
+
+//      etxtra test to see the changes in DB
+        entityManager.flush();
+        assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE)).isEqualTo(initialBookings - 1);
+        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE,
+                "user_id = " + rentUserId + " AND book_id = " + rentableBookId)).isEqualTo(0);
         assertThat(jdbcClient.sql("SELECT available FROM books WHERE id = ?").param(rentableBookId).query(Integer.class).single()).isEqualTo(initialAvailable + 1);
     }
 
@@ -504,7 +568,7 @@ public class UserControllerTest {
                     })
                     .collect(Collectors.toList());
 
-            // Assert that one request succeeded (204) and the other - failed (409), but without guaranty which task did the job first; we check the set content but not the codes order
+            // Assert that one request succeeded (204) and the other - failed (409), but without guaranty which task did the job first; we check the set content but not the codes' order
             assertThat(statusCodes).containsExactlyInAnyOrder(204, 409);
 
             // Verify final state in the database
@@ -519,5 +583,7 @@ public class UserControllerTest {
             });
         }
     }
-}
 
+
+
+}

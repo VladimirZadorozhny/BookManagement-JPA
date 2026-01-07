@@ -61,25 +61,20 @@ public class AuthorController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public AuthorDto createAuthor(@Valid @RequestBody CreateAuthorRequestDto authorDto) {
-        Author author = new Author(1L, authorDto.name(), authorDto.birthdate());
-        long newId = authorService.save(author);
-        return toDto(new Author(newId, author.getName(), author.getBirthdate()));
+        var author = authorService.save(authorDto);
+        return toDto(author);
     }
 
     @PutMapping("/{id}")
     public AuthorDto updateAuthor(@PathVariable long id, @Valid @RequestBody UpdateAuthorRequestDto authorDto) {
-        authorService.findById(id)
-                .orElseThrow(() -> new AuthorNotFoundException(id));
-        Author authorToUpdate = new Author(id, authorDto.name(), authorDto.birthdate());
-        authorService.update(authorToUpdate);
+        Author authorToUpdate = authorService.update(id, authorDto);
         return toDto(authorToUpdate);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAuthor(@PathVariable long id) {
-        authorService.findById(id)
-                .orElseThrow(() -> new AuthorNotFoundException(id));
+
         authorService.deleteById(id);
     }
 
@@ -88,7 +83,7 @@ public class AuthorController {
     }
 
     private BookDto toBookDto(Book book) {
-        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthorId(), book.getAvailable());
+        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable());
     }
 }
 

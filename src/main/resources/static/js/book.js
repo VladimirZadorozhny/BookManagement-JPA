@@ -19,7 +19,7 @@ const editAvailableInput = byId("edit-available");
 const bookDataString = sessionStorage.getItem("bookData");
 const bookDataFromStorage = bookDataString ? JSON.parse(bookDataString) : {};
 const bookId = bookDataFromStorage.id;
-const availableCount = bookDataFromStorage.available; // This is the integer count for update form, for statistic is used boolean (available/not available)
+
 
 let currentBookData = {}; // To store the fetched DTO data for display
 let originalBookDataForEdit = {}; // To store data for checking changes in edit form
@@ -36,17 +36,13 @@ function showEditForm() {
     hide(staticDetailsDiv.id);
     show(editFormContainerDiv.id);
     
-    // Disable other action buttons
-    editButton.disabled = true;
-    deleteButton.disabled = true;
-    rentButton.disabled = true;
 
     // Store original data for change detection
     originalBookDataForEdit = {
         title: currentBookData.title,
         year: currentBookData.year,
         authorId: currentBookData.authorId,
-        available: availableCount 
+        available: currentBookData.available
     };
 
     // Pre-fill the form with original data
@@ -117,7 +113,7 @@ async function fetchBookDetails() {
             setText("title", currentBookData.title);
             setText("year", currentBookData.year);
             setText("author", currentBookData.authorName || "Unknown");
-            setText("available", currentBookData.available ? "Yes" : "No");
+            setText("available", Number(currentBookData.available) > 0 ? "Yes" : "No");
 
             rentButton.disabled = !currentBookData.available;
             rentButton.classList.toggle("disabled-button", !currentBookData.available);
@@ -174,10 +170,7 @@ async function updateBook() {
         });
 
         if (response.ok) {
-            // The availableCount in sessionStorage is now outdated and need to be updated
-            const newBookData = { id: bookId, available: updatedBook.available };
-            sessionStorage.setItem("bookData", JSON.stringify(newBookData));
-            
+
             await showModal("Success", `Book '${updatedBook.title}' updated successfully!`);
             await fetchBookDetails(); 
         } else {

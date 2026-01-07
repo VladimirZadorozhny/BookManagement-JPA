@@ -1,13 +1,15 @@
 package org.mystudying.bookmanagementjpa.services;
 
-
 import org.mystudying.bookmanagementjpa.domain.Book;
 import org.mystudying.bookmanagementjpa.dto.BookDetailDto;
+import org.mystudying.bookmanagementjpa.dto.CreateBookRequestDto;
+import org.mystudying.bookmanagementjpa.dto.UpdateBookRequestDto;
 import org.mystudying.bookmanagementjpa.exceptions.AuthorNotFoundException;
 import org.mystudying.bookmanagementjpa.exceptions.BookHasBookingsException;
+import org.mystudying.bookmanagementjpa.exceptions.BookNotFoundException;
 import org.mystudying.bookmanagementjpa.repositories.AuthorRepository;
 import org.mystudying.bookmanagementjpa.repositories.BookRepository;
-import org.mystudying.bookmanagementjpa.repositories.BookingRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,17 +20,15 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class BookService {
     private final BookRepository bookRepository;
-    private final BookingRepository bookingRepository;
     private final AuthorRepository authorRepository;
 
-    public BookService(BookRepository bookRepository, BookingRepository bookingRepository, AuthorRepository authorRepository) {
+    public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
         this.bookRepository = bookRepository;
-        this.bookingRepository = bookingRepository;
         this.authorRepository = authorRepository;
     }
 
     public List<Book> findAll() {
-        return bookRepository.findAll();
+        return bookRepository.findAll(Sort.by("title"));
     }
 
     public List<Book> findByYear(int year) {
@@ -40,7 +40,7 @@ public class BookService {
     }
 
     public List<Book> findByAuthorId(long authorId) {
-        return bookRepository.findByAuthorId(authorId);
+        return bookRepository.findByAuthor_Id(authorId);
     }
 
     public List<Book> findByAvailability(boolean available) {
@@ -60,7 +60,7 @@ public class BookService {
     }
 
     public List<Book> findByTitleContaining(String title) {
-        return bookRepository.findByTitleContaining(title);
+        return bookRepository.findByTitleContainingOrderByTitle(title);
     }
 
     public List<Book> findByAuthorNameContaining(String authorName) {
@@ -68,25 +68,36 @@ public class BookService {
     }
 
     @Transactional
-    public long save(Book book) {
-        authorRepository.findById(book.getAuthorId())
-                .orElseThrow(() -> new AuthorNotFoundException(book.getAuthorId()));
-        return bookRepository.save(book);
+    public Book save(CreateBookRequestDto createBookRequestDto) {
+        // Validation of Author existence
+        var author = authorRepository.findById(createBookRequestDto.authorId())
+                .orElseThrow(() -> new AuthorNotFoundException(createBookRequestDto.authorId()));
+        
+       return bookRepository.save(new Book(null, createBookRequestDto.title(), createBookRequestDto.year(),
+               author, createBookRequestDto.available()));
     }
 
     @Transactional
-    public void update(Book book) {
-        authorRepository.findById(book.getAuthorId())
-                .orElseThrow(() -> new AuthorNotFoundException(book.getAuthorId()));
-        bookRepository.update(book);
+    public Book update(long id, UpdateBookRequestDto updateBookRequestDto) {
+        var book = bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
+        var author = authorRepository.findById(updateBookRequestDto.authorId()).orElseThrow(() ->
+                new AuthorNotFoundException(updateBookRequestDto.authorId()));
+
+        book.setTitle(updateBookRequestDto.title());
+        book.setYear(updateBookRequestDto.year());
+        book.setAvailable(updateBookRequestDto.available());
+        book.setAuthor(author);
+
+        return book;
+
     }
 
     @Transactional
     public void deleteById(long id) {
-        if (bookingRepository.existsByBookId(id)) {
+        Book book = bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
+        if (!book.getUsers().isEmpty()) {
             throw new BookHasBookingsException(id);
         }
-        bookRepository.deleteById(id);
+        bookRepository.delete(book);
     }
 }
-

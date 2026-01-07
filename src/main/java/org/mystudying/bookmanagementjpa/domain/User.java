@@ -1,29 +1,51 @@
 package org.mystudying.bookmanagementjpa.domain;
 
-import java.util.regex.Pattern;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import org.mystudying.bookmanagementjpa.exceptions.BookAlreadyBorrowedException;
+import org.mystudying.bookmanagementjpa.exceptions.BookNotBorrowedException;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Table(name = "users")
 public class User {
-    private final long id;
-    private final String name;
-    private final String email;
 
-    private static final String EMAIL_REGEXP = "[-.\\w]+@([\\w-]+\\.)+[\\w-]+";
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    public User(long id, String name, String email) {
+    @NotBlank(message = "Name must not be blank.")
+    @Column(nullable = false)
+    private String name;
 
-        if (id < 1)
-            throw new IllegalArgumentException("Id must be positive.");
-        if (name.isBlank())
-            throw new IllegalArgumentException("Name must not be blank.");
-        if (email == null || !Pattern.matches(EMAIL_REGEXP, email))
-            throw new IllegalArgumentException("Wrong format of email!");
+    @NotBlank(message = "Email must not be blank.")
+    @Email(message = "Wrong format of email!")
+    @Column(nullable = false, unique = true)
+    private String email;
 
+    @ManyToMany
+    @JoinTable(
+        name = "bookings",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "book_id")
+    )
+    private Set<Book> books = new HashSet<>();
+
+    protected User() {
+        // Required by JPA
+    }
+
+    public User(Long id, String name, String email) {
         this.id = id;
         this.name = name;
         this.email = email;
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
@@ -35,6 +57,22 @@ public class User {
         return email;
     }
 
+    public Set<Book> getBooks() {
+        return Collections.unmodifiableSet(books);
+    }
+
+    public void addBook(Book book) {
+        if (!books.add(book)) {
+            throw new BookAlreadyBorrowedException();
+        }
+    }
+
+    public void removeBook(Book book) {
+        if (!books.remove(book)) {
+            throw new BookNotBorrowedException();
+        }
+    }
+
     @Override
     public String toString() {
         return "User{" +
@@ -43,5 +81,25 @@ public class User {
                 ", email='" + email + "'" +
                 '}';
     }
-}
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        User user = (User) o;
+        return email != null && email.equals(user.email);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+}

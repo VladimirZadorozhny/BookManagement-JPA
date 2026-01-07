@@ -4,7 +4,7 @@ public class BookDetailDto {
     private long id;
     private String title;
     private int year;
-    private boolean available;
+    private int available;
     private String authorName;
     private long authorId;
 
@@ -12,7 +12,7 @@ public class BookDetailDto {
     public BookDetailDto() {
     }
 
-    public BookDetailDto(long id, String title, int year, boolean available, String authorName, long authorId) {
+    public BookDetailDto(long id, String title, int year, int available, String authorName, long authorId) {
         this.id = id;
         this.title = title;
         this.year = year;
@@ -46,11 +46,11 @@ public class BookDetailDto {
         this.year = year;
     }
 
-    public boolean isAvailable() {
+    public int getAvailable() {
         return available;
     }
 
-    public void setAvailable(boolean available) {
+    public void setAvailable(int available) {
         this.available = available;
     }
 

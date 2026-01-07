@@ -1,6 +1,7 @@
 package org.mystudying.bookmanagementjpa.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -20,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,10 +38,12 @@ public class BookControllerTest {
 
     private final MockMvc mockMvc;
     private final JdbcClient jdbcClient;
+    private final EntityManager entityManager;
 
-    public BookControllerTest(MockMvc mockMvc, JdbcClient jdbcClient) {
+    public BookControllerTest(MockMvc mockMvc, JdbcClient jdbcClient, EntityManager entityManager) {
         this.mockMvc = mockMvc;
         this.jdbcClient = jdbcClient;
+        this.entityManager = entityManager;
     }
 
     private long idOfTestBook1() {
@@ -125,6 +130,7 @@ public class BookControllerTest {
     void getAllBooksReturnsBooksByYear() throws Exception {
         mockMvc.perform(get("/api/books").queryParam("year", "2001"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].year").value(everyItem(is(2001))))
                 .andExpect(jsonPath("$.length()").value(JdbcTestUtils.countRowsInTableWhere(
                         jdbcClient, BOOKS_TABLE, "year = 2001"
                 )));
@@ -134,7 +140,7 @@ public class BookControllerTest {
     void getAllBooksReturnsBooksByAuthorName() throws Exception {
         String authorName = "Test Author 1";
         long authorId = idOfTestAuthor1();
-        
+
         MvcResult result = mockMvc.perform(get("/api/books").queryParam("authorName", authorName))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -191,27 +197,30 @@ public class BookControllerTest {
         long initialRowCount = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKS_TABLE);
         String newBookJson = readJsonFile("correctBook.json");
 
-        mockMvc.perform(post("/api/books")
+        MvcResult result = mockMvc.perform(post("/api/books")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newBookJson))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.title").value("New Book From Test"));
+                .andExpect(jsonPath("$.title").value("New Book From Test"))
+                .andReturn();
+        String jsonResponse = result.getResponse().getContentAsString();
+        int newId = JsonPath.parse(jsonResponse).read("$.id");
 
-        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKS_TABLE, "title = 'New Book From Test'")).isEqualTo(1);
+        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKS_TABLE, "title = 'New Book From Test' and id = " + newId)).isEqualTo(1);
         assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKS_TABLE)).isEqualTo(initialRowCount + 1);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "BookWithEmptyTitle.json",
-        "BookWithoutTitle.json",
-        "BookWithFutureYear.json",
-        "BookWithoutYear.json",
-        "BookWithZeroAuthorId.json",
-        "BookWithoutAuthorId.json",
-        "BookWithNegativeAvailable.json",
-        "BookWithoutAvailable.json"
+            "BookWithEmptyTitle.json",
+            "BookWithoutTitle.json",
+            "BookWithFutureYear.json",
+            "BookWithoutYear.json",
+            "BookWithZeroAuthorId.json",
+            "BookWithoutAuthorId.json",
+            "BookWithNegativeAvailable.json",
+            "BookWithoutAvailable.json"
     })
     void createBookReturnsBadRequestForInvalidData(String fileName) throws Exception {
         String invalidBookJson = readJsonFile(fileName);
@@ -233,7 +242,15 @@ public class BookControllerTest {
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.title").value("Updated Book Title"))
                 .andExpect(jsonPath("$.year").value(2010));
-        
+
+        mockMvc.perform(get("/api/books/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.title").value("Updated Book Title"))
+                .andExpect(jsonPath("$.year").value(2010));
+
+//        extra test to see the changes in DB
+        entityManager.flush();
         assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKS_TABLE, "id = " + id + " AND title = 'Updated Book Title'")).isEqualTo(1);
     }
 
@@ -251,10 +268,15 @@ public class BookControllerTest {
     void deleteBookReturnsNoContent() throws Exception {
         long id = idOfBookForDeletion();
         long initialRowCount = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKS_TABLE);
-        
+
         mockMvc.perform(delete("/api/books/{id}", id))
                 .andExpect(status().isNoContent());
-        
+
+        mockMvc.perform(get("/api/books/{id}", id))
+                .andExpect(status().isNotFound());
+
+//        extra test to see changes in DB
+        entityManager.flush();
         assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKS_TABLE)).isEqualTo(initialRowCount - 1);
         assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKS_TABLE, "id = " + id)).isEqualTo(0);
     }
@@ -270,5 +292,5 @@ public class BookControllerTest {
     private String readJsonFile(String filename) throws IOException {
         return new ClassPathResource(filename).getContentAsString(StandardCharsets.UTF_8);
     }
-}
 
+}

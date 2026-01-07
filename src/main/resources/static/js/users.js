@@ -94,7 +94,6 @@ async function checkPendingAction() {
         if (pendingAction.action === 'rent') {
             hide(userSidebarNav.id);
             await showModal(`Select a User to Rent: '${pendingAction.bookTitle}`, `Please select a user from the list below to complete the rental.` );
-            // actionForms.innerHTML = `<h3>Select a User to Rent: '${pendingAction.bookTitle}'</h3><p>Please select a user from the list below to complete the rental.</p>`;
             await fetchAndDisplayUsers("/api/users");
         }
     }

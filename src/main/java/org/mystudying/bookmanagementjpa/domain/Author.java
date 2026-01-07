@@ -1,27 +1,36 @@
 package org.mystudying.bookmanagementjpa.domain;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.PastOrPresent;
 import java.time.LocalDate;
 
+@Entity
+@Table(name = "authors")
 public class Author {
-    private final long id;
-    private final String name;
-    private final LocalDate birthdate;
 
-    public Author(long id, String name, LocalDate birthdate) {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-        if (id < 1)
-            throw new IllegalArgumentException("Author ID must be positive.");
-        if (name.isBlank())
-            throw new IllegalArgumentException("Author name must not be empty.");
-        if (birthdate.isAfter(LocalDate.now()))
-            throw new IllegalArgumentException("Author birthdate must not be after now.");
+    @NotBlank(message = "Author name must not be empty.")
+    @Column(nullable = false)
+    private String name;
 
+    @PastOrPresent(message = "Author birthdate must not be after now.")
+    private LocalDate birthdate;
+
+    protected Author() {
+        // Required by JPA
+    }
+
+    public Author(Long id, String name, LocalDate birthdate) {
         this.id = id;
         this.name = name;
         this.birthdate = birthdate;
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
@@ -41,5 +50,25 @@ public class Author {
                 ", birthdate=" + birthdate +
                 '}';
     }
-}
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Author)) return false;
+        Author author = (Author) o;
+        return id != null && id.equals(author.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setBirthdate(LocalDate birthdate) {
+        this.birthdate = birthdate;
+    }
+}

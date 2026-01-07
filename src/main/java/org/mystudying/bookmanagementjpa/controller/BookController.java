@@ -84,31 +84,22 @@ public class BookController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public BookDto createBook(@Valid @RequestBody CreateBookRequestDto bookDto) {
-        Book book = new Book(1L, bookDto.title(), bookDto.year(), bookDto.authorId(), bookDto.available());
-        long newId = bookService.save(book);
-
-        return toDto(new Book(newId, book.getTitle(), book.getYear(), book.getAuthorId(), book.getAvailable()));
+        return toDto(bookService.save(bookDto));
     }
 
     @PutMapping("/{id}")
     public BookDto updateBook(@PathVariable long id, @Valid @RequestBody UpdateBookRequestDto bookDto) {
-        bookService.findById(id)
-                .orElseThrow(() -> new BookNotFoundException(id));
-        Book bookToUpdate = new Book(id, bookDto.title(), bookDto.year(), bookDto.authorId(), bookDto.available());
-        bookService.update(bookToUpdate);
-        return toDto(bookToUpdate);
+        return toDto(bookService.update(id, bookDto));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteBook(@PathVariable long id) {
-        bookService.findById(id)
-                .orElseThrow(() -> new BookNotFoundException(id));
-        bookService.deleteById(id);
+           bookService.deleteById(id);
     }
 
     private BookDto toDto(Book book) {
-        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthorId(), book.getAvailable());
+        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable());
     }
 }
 

@@ -1,14 +1,14 @@
 package org.mystudying.bookmanagementjpa.services;
 
-
 import org.mystudying.bookmanagementjpa.domain.Book;
-import org.mystudying.bookmanagementjpa.domain.Booking;
 import org.mystudying.bookmanagementjpa.domain.User;
+import org.mystudying.bookmanagementjpa.dto.CreateUserRequestDto;
+import org.mystudying.bookmanagementjpa.dto.UpdateUserRequestDto;
 import org.mystudying.bookmanagementjpa.exceptions.*;
 import org.mystudying.bookmanagementjpa.repositories.BookRepository;
-import org.mystudying.bookmanagementjpa.repositories.BookingRepository;
 import org.mystudying.bookmanagementjpa.repositories.UserRepository;
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,16 +20,14 @@ import java.util.Optional;
 public class UserService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
-    private final BookingRepository bookingRepository;
 
-    public UserService(UserRepository userRepository, BookRepository bookRepository, BookingRepository bookingRepository) {
+    public UserService(UserRepository userRepository, BookRepository bookRepository) {
         this.userRepository = userRepository;
         this.bookRepository = bookRepository;
-        this.bookingRepository = bookingRepository;
     }
 
     public List<User> findAll() {
-        return userRepository.findAll();
+        return userRepository.findAll(Sort.by("name"));
     }
 
     public Optional<User> findById(long id) {
@@ -44,35 +42,41 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
+//    don't need it anymore since ManyToMany relation between User and Book
     public List<Book> findBooksByUserId(long userId) {
         userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
         return bookRepository.findBooksByUserId(userId);
     }
 
     @Transactional
-    public long save(User user) {
+    public User save(CreateUserRequestDto createUserRequestDto) {
         try {
-            return userRepository.save(user);
-        } catch (DuplicateKeyException e) {
-            throw new EmailAlreadyExistsException(user.getEmail());
+            return userRepository.save(new User(null, createUserRequestDto.name(), createUserRequestDto.email()));
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyExistsException(createUserRequestDto.email());
         }
     }
 
     @Transactional
-    public void update(User user) {
+    public User update(long id, UpdateUserRequestDto updateUserRequestDto) {
+        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
         try {
-            userRepository.update(user);
-        } catch (DuplicateKeyException e) {
+            user.setName(updateUserRequestDto.name());
+            user.setEmail(updateUserRequestDto.email());
+            userRepository.saveAndFlush(user);
+            return user;
+        } catch (DataIntegrityViolationException e) {
             throw new EmailAlreadyExistsException(user.getEmail());
         }
     }
 
     @Transactional
     public void deleteById(long id) {
-        if (bookingRepository.existsByUserId(id)) {
+        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
+        if (!user.getBooks().isEmpty()) {
             throw new UserHasBookingsException(id);
         }
-        userRepository.deleteById(id);
+        userRepository.delete(user);
     }
 
     @Transactional
@@ -80,17 +84,9 @@ public class UserService {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
         Book book = bookRepository.findAndLockById(bookId).orElseThrow(() -> new BookNotFoundException(bookId));
 
-        if (book.getAvailable() <= 0) {
-            throw new BookNotAvailableException(bookId);
-        }
-
-        if (bookingRepository.find(user.getId(), book.getId()).isPresent()) {
-            throw new BookAlreadyBorrowedException();
-        }
-
-        bookingRepository.create(new Booking(user.getId(), book.getId()));
         book.rentBook();
-        bookRepository.update(book);
+        user.addBook(book);
+        book.addUser(user);
     }
 
     @Transactional
@@ -98,13 +94,8 @@ public class UserService {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
         Book book = bookRepository.findAndLockById(bookId).orElseThrow(() -> new BookNotFoundException(bookId));
 
-        if (bookingRepository.find(user.getId(), book.getId()).isEmpty()) {
-            throw new BookNotBorrowedException();
-        }
-
-        bookingRepository.delete(new Booking(user.getId(), book.getId()));
+        user.removeBook(book);
+        book.removeUser(user);
         book.returnBook();
-        bookRepository.update(book);
     }
 }
-

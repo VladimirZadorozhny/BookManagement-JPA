@@ -23,6 +23,8 @@ public class UserController {
         this.userService = userService;
     }
 
+
+
     @GetMapping
     public List<UserDto> getAllUsers() {
         return userService.findAll().stream()
@@ -48,36 +50,30 @@ public class UserController {
     }
 
     @GetMapping("/{id}/books")
-    public List<BookDto> getBooksByUser(@PathVariable long id) {
-        userService.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
-        return userService.findBooksByUserId(id).stream()
-                .map(this::toBookDto)
+    public List<BookIdTitleYear> getBooksByUser(@PathVariable long id) {
+
+        return userService.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id))
+                .getBooks().stream()
+//                .map(this::toBookDto)
+                .map(BookIdTitleYear::new)
                 .collect(Collectors.toList());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserDto createUser(@Valid @RequestBody CreateUserRequestDto userDto) {
-        User user = new User(1L, userDto.name(), userDto.email());
-        long newId = userService.save(user);
-        return toDto(new User(newId, user.getName(), user.getEmail()));
+        return toDto(userService.save(userDto));
     }
 
     @PutMapping("/{id}")
     public UserDto updateUser(@PathVariable long id, @Valid @RequestBody UpdateUserRequestDto userDto) {
-        userService.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
-        User userToUpdate = new User(id, userDto.name(), userDto.email());
-        userService.update(userToUpdate);
-        return toDto(userToUpdate);
+        return toDto(userService.update(id, userDto));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable long id) {
-        userService.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
         userService.deleteById(id);
     }
 
@@ -98,7 +94,13 @@ public class UserController {
     }
     
     private BookDto toBookDto(Book book) {
-        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthorId(), book.getAvailable());
+        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable());
+    }
+
+    private record BookIdTitleYear(long id, String title, int year) {
+        BookIdTitleYear(Book book) {
+            this(book.getId(), book.getTitle(), book.getYear());
+        }
     }
 }
 

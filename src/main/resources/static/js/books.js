@@ -118,7 +118,7 @@ async function displayBooks(books) {
         a.onclick = () => {
             const bookData = {
                 id: book.id,
-                available: book.available
+//                available: book.available
             };
             sessionStorage.setItem("bookData", JSON.stringify(bookData));
         };
