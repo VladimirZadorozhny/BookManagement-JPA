@@ -157,6 +157,13 @@ public class AuthorControllerTest {
 
         // Explicitly delete books by this author to avoid foreign key constraint issues only in this test for correct checking of deletion method
         // The Book For Deletion is linked to Author For Deletion
+        
+        // First delete from book_genres (join table)
+        jdbcClient.sql("DELETE FROM book_genres WHERE book_id IN (SELECT id FROM books WHERE author_id = ?)")
+                .param(authorIdToDelete)
+                .update();
+
+        // Then delete from books
         jdbcClient.sql("DELETE FROM " + BOOKS_TABLE + " WHERE author_id = ?")
                 .param(authorIdToDelete)
                 .update();
