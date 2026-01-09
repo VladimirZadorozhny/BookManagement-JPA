@@ -18,6 +18,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     List<Book> findByAuthor_Id(Long authorId);
 
+    List<Book> findByGenres_Id(Long genreId);
+
+    List<Book> findByGenres_NameIgnoreCase(String name);
+
     @Query("SELECT b FROM Book b JOIN b.author a WHERE a.name = :authorName ORDER BY b.title")
     List<Book> findByAuthorName(@Param("authorName") String authorName);
 
@@ -26,15 +30,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     Optional<Book> findByTitle(String title);
 
-//    don't need it anymore since ManyToMany relation between User and Book
-    @Query("SELECT b FROM Book b JOIN b.users u WHERE u.id = :userId ORDER BY b.title")
+    @Query("SELECT b FROM Book b JOIN b.bookings bk WHERE bk.user.id = :userId AND bk.returnedAt IS NULL ORDER BY b.title")
     List<Book> findBooksByUserId(@Param("userId") long userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Book b WHERE b.id = :id")
     Optional<Book> findAndLockById(@Param("id") long id);
 
-    @Query("SELECT new org.mystudying.bookmanagementjpa.dto.BookDetailDto(b.id, b.title, b.year, b.available, a.name, a.id) " +
+    @Query("SELECT new BookDetailDto(b.id, b.title, b.year, b.available, a.name, a.id) " +
            "FROM Book b JOIN b.author a WHERE b.id = :id")
     Optional<BookDetailDto> findBookDetailsById(@Param("id") long id);
 

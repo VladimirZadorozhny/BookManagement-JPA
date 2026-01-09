@@ -3,9 +3,7 @@ package org.mystudying.bookmanagementjpa.domain;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import org.mystudying.bookmanagementjpa.exceptions.BookAlreadyBorrowedException;
 import org.mystudying.bookmanagementjpa.exceptions.BookNotAvailableException;
-import org.mystudying.bookmanagementjpa.exceptions.BookNotBorrowedException;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -35,8 +33,16 @@ public class Book {
     @Column(nullable = false)
     private int available;
 
-    @ManyToMany(mappedBy = "books")
-    private Set<User> users = new HashSet<>();
+    @ManyToMany
+    @JoinTable(
+        name = "book_genres",
+        joinColumns = @JoinColumn(name = "book_id"),
+        inverseJoinColumns = @JoinColumn(name = "genre_id")
+    )
+    private Set<Genre> genres = new HashSet<>();
+
+    @OneToMany(mappedBy = "book")
+    private Set<Booking> bookings = new HashSet<>();
 
     protected Book() {
         // Required by JPA
@@ -70,20 +76,28 @@ public class Book {
         return available;
     }
 
-    public Set<User> getUsers() {
-        return Collections.unmodifiableSet(users);
+    public Set<Genre> getGenres() {
+        return Collections.unmodifiableSet(genres);
     }
 
-    public void addUser(User user) {
-        if (!users.add(user)) {
-            throw new BookAlreadyBorrowedException();
-        }
+    public void addGenre(Genre genre) {
+        this.genres.add(genre);
     }
 
-    public void removeUser(User user) {
-        if (!users.remove(user)) {
-            throw new BookNotBorrowedException();
-        }
+    public void removeGenre(Genre genre) {
+        this.genres.remove(genre);
+    }
+
+    public Set<Booking> getBookings() {
+        return Collections.unmodifiableSet(bookings);
+    }
+
+    public void addBooking(Booking booking) {
+        this.bookings.add(booking);
+    }
+
+    public void removeBooking(Booking booking) {
+        this.bookings.remove(booking);
     }
 
     public void rentBook() {

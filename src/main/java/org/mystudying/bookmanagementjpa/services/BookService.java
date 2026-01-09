@@ -9,6 +9,7 @@ import org.mystudying.bookmanagementjpa.exceptions.BookHasBookingsException;
 import org.mystudying.bookmanagementjpa.exceptions.BookNotFoundException;
 import org.mystudying.bookmanagementjpa.repositories.AuthorRepository;
 import org.mystudying.bookmanagementjpa.repositories.BookRepository;
+import org.mystudying.bookmanagementjpa.repositories.GenreRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +22,12 @@ import java.util.Optional;
 public class BookService {
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
+    private final GenreRepository genreRepository;
 
-    public BookService(BookRepository bookRepository, AuthorRepository authorRepository) {
+    public BookService(BookRepository bookRepository, AuthorRepository authorRepository, GenreRepository genreRepository) {
         this.bookRepository = bookRepository;
         this.authorRepository = authorRepository;
+        this.genreRepository = genreRepository;
     }
 
     public List<Book> findAll() {
@@ -43,6 +46,10 @@ public class BookService {
         return bookRepository.findByAuthor_Id(authorId);
     }
 
+    public List<Book> findByGenreId(long genreId) {
+        return bookRepository.findByGenres_Id(genreId);
+    }
+
     public List<Book> findByAvailability(boolean available) {
         return bookRepository.findByAvailability(available);
     }
@@ -52,7 +59,11 @@ public class BookService {
     }
 
     public Optional<BookDetailDto> findBookDetailsById(long id) {
-        return bookRepository.findBookDetailsById(id);
+        return bookRepository.findBookDetailsById(id)
+                .map(dto -> {
+                    dto.setGenres(genreRepository.findNamesByBookId(id));
+                    return dto;
+                });
     }
 
     public Optional<Book> findByTitle(String title) {
@@ -95,7 +106,7 @@ public class BookService {
     @Transactional
     public void deleteById(long id) {
         Book book = bookRepository.findById(id).orElseThrow(() -> new BookNotFoundException(id));
-        if (!book.getUsers().isEmpty()) {
+        if (!book.getBookings().isEmpty()) {
             throw new BookHasBookingsException(id);
         }
         bookRepository.delete(book);

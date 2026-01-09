@@ -30,9 +30,15 @@ public class BookController {
                                      @RequestParam Optional<Integer> year,
                                      @RequestParam Optional<String> authorName,
                                      @RequestParam Optional<String> title,
-                                     @RequestParam Optional<String> authorPartName) {
+                                     @RequestParam Optional<String> authorPartName,
+                                     @RequestParam Optional<Long> genreId) {
         if (available.isPresent()) {
             return bookService.findByAvailability(available.get()).stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        }
+        if (genreId.isPresent()) {
+            return bookService.findByGenreId(genreId.get()).stream()
                     .map(this::toDto)
                     .collect(Collectors.toList());
         }

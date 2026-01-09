@@ -1,5 +1,7 @@
 package org.mystudying.bookmanagementjpa.dto;
 
+import java.util.List;
+
 public class BookDetailDto {
     private long id;
     private String title;
@@ -7,6 +9,7 @@ public class BookDetailDto {
     private int available;
     private String authorName;
     private long authorId;
+    private List<String> genres;
 
 
     public BookDetailDto() {
@@ -69,5 +72,12 @@ public class BookDetailDto {
     public void setAuthorId(long authorId) {
         this.authorId = authorId;
     }
-}
 
+    public List<String> getGenres() {
+        return genres;
+    }
+
+    public void setGenres(List<String> genres) {
+        this.genres = genres;
+    }
+}

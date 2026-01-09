@@ -16,12 +16,15 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({BookNotFoundException.class, AuthorNotFoundException.class, UserNotFoundException.class})
+    @ExceptionHandler({BookNotFoundException.class, AuthorNotFoundException.class, UserNotFoundException.class,
+            GenreNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleNotFoundException(RuntimeException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
-    @ExceptionHandler({BookAlreadyBorrowedException.class, BookNotBorrowedException.class, EmailAlreadyExistsException.class, BookNotAvailableException.class, BookHasBookingsException.class, AuthorHasBooksException.class, UserHasBookingsException.class})
+    @ExceptionHandler({BookAlreadyBorrowedException.class, BookNotBorrowedException.class, EmailAlreadyExistsException.class,
+            BookNotAvailableException.class, BookHasBookingsException.class, AuthorHasBooksException.class,
+            UserHasBookingsException.class, UserHasOverdueBooksException.class, UserHasUnpaidFinesException.class})
     public ResponseEntity<ErrorResponse> handleConflictException(RuntimeException ex, HttpServletRequest request) {
         return buildErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }

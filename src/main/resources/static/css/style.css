@@ -306,6 +306,44 @@ button:disabled, .disabled-button {
     margin-left: 15px;
 }
 
+/* Grouped Genre Styles */
+.genre-group {
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    display: block !important; /* Override flex for the group container */
+}
+
+.genre-title {
+    font-size: 1.25em;
+    font-weight: 700;
+    color: #343a40;
+    display: block;
+    margin-bottom: 10px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+}
+
+.genre-books-list {
+    list-style-type: none;
+    padding: 0;
+    margin-left: 10px;
+}
+
+.genre-books-list li {
+    border: none !important;
+    padding: 5px 0 !important;
+    margin-bottom: 2px !important;
+    background: transparent !important;
+}
+
+.genre-books-list li a {
+    font-size: 1.1em;
+    color: #007bff;
+}
+
 /* Footer */
 footer {
     text-align: center;

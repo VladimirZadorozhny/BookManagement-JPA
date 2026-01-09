@@ -29,8 +29,11 @@ const showAllBooksButton = byId("show-all");
 const showAvailableBooksButton = byId("show-available");
 const showByYearButton = byId("show-by-year");
 const showByAuthorButton = byId("show-by-author");
+const showByGenreButton = byId("show-by-genre");
+const showGroupedByGenreButton = byId("show-grouped-by-genre");
 const showByTitleButton = byId("show-by-title");
 const showCreateBookButton = byId("show-create-form");
+const showGenresButton = byId("show-genres");
 const findBooksDropdownButton = document.querySelector(".dropdown .dropbtn");
 const findBooksDropdownContainer = document.querySelector(".dropdown");
 
@@ -40,8 +43,11 @@ showAllBooksButton.addEventListener("click", async () => { showBooksList(); awai
 showAvailableBooksButton.addEventListener("click", async () => { showBooksList(); await fetchAndDisplayBooks("/api/books?available=true"); });
 showByYearButton.addEventListener("click", () => showFindBookFormView("Year"));
 showByAuthorButton.addEventListener("click", () => showFindBookFormView("Author Name"));
+showByGenreButton.addEventListener("click", () => showFindBookFormView("Genre Name"));
+showGroupedByGenreButton.addEventListener("click", async () => { showBooksList(); await fetchAndDisplayGroupedByGenre(); });
 showByTitleButton.addEventListener("click", () => showFindBookFormView("Title"));
 showCreateBookButton.addEventListener("click", showCreateBookFormView);
+showGenresButton.addEventListener("click", async () => { showBooksList(); await fetchAndDisplayGenres(); });
 
 // --- Event Listeners for Static Forms ---
 
@@ -74,6 +80,10 @@ findBookFormStatic.addEventListener("submit", async event => {
         url += `year=${encodeURIComponent(year)}`;
     } else if (filterType === "Author Name") {
         url += `authorPartName=${encodeURIComponent(value)}`;
+    } else if (filterType === "Genre Name") {
+
+        await searchByGenreName(value);
+        return;
     } else if (filterType === "Title") {
         url += `title=${encodeURIComponent(value)}`;
     }
@@ -185,6 +195,7 @@ function showFindBookFormView(filterType) {
  * @param {string} url - The API endpoint to fetch from
  */
 async function fetchAndDisplayBooks(url) {
+setText("results-separator", "");
     try {
         const response = await fetch(url);
         if (response.ok) {
@@ -255,3 +266,123 @@ async function createBook() {
         await showModal("Error", "A network error occurred while creating the book.");
     }
 }
+
+async function fetchAndDisplayGenres() {
+    try {
+        const response = await fetch("/api/genres");
+        if (response.ok) {
+            const genres = await response.json();
+            displayGenres(genres);
+        } else {
+            await showModal("Error", "Failed to fetch genres.");
+        }
+    } catch (error) {
+        await showModal("Error", "A network error occurred.");
+    }
+}
+
+function displayGenres(genres) {
+    clearResults();
+    setText("results-separator", "Genres");
+    show("results-separator");
+    
+    if (genres.length === 0) {
+        booksList.innerHTML = "<li>No genres found.</li>";
+        return;
+    }
+
+    genres.forEach(genre => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = "#";
+        a.innerText = genre.name;
+        a.onclick = async (e) => {
+            e.preventDefault();
+            await fetchAndDisplayBooks(`/api/genres/name/${encodeURIComponent(genre.name)}/books`);
+            setText("results-separator", `Books for Genre: ${genre.name}`);
+        };
+        li.append(a);
+        booksList.append(li);
+    });
+}
+
+async function searchByGenreName(name) {
+    try {
+        const response = await fetch(`/api/genres/name/${encodeURIComponent(name)}/books`);
+        if (response.ok) {
+            const books = await response.json();
+            await displayBooks(books);
+            setText("results-separator", `Books for Genre: ${name}`);
+            showBooksList();
+        } else {
+            const errorData = await response.json();
+            await showModal("Info", `No books found for genre "${name}"`);
+        }
+    } catch (error) {
+        await showModal("Error", "Network error while searching genre.");
+    }
+}
+
+async function fetchAndDisplayGroupedByGenre() {
+    try {
+        const response = await fetch("/api/genres/with-books");
+        if (response.ok) {
+            const data = await response.json();
+            displayGroupedBooks(data);
+        } else {
+            await showModal("Error", "Failed to fetch grouped books.");
+        }
+    } catch (error) {
+        await showModal("Error", "A network error occurred.");
+    }
+}
+
+function displayGroupedBooks(genresWithBooks) {
+    clearResults();
+    setText("results-separator", "Books Grouped by Genre");
+    show("results-separator");
+
+    if (genresWithBooks.length === 0) {
+        booksList.innerHTML = "<li>No genres found.</li>";
+        return;
+    }
+
+    genresWithBooks.forEach(genre => {
+        if (genre.books && genre.books.length > 0) {
+            const genreItem = document.createElement("li");
+            genreItem.className = "genre-group";
+            genreItem.innerHTML = `<span class='genre-title'>${genre.name}</span>`;
+            const innerUl = document.createElement("ul");
+            innerUl.className = "genre-books-list";
+            
+            genre.books.forEach(book => {
+                const bookLi = document.createElement("li");
+                const a = document.createElement("a");
+                a.href = "book.html";
+                a.innerText = book.title;
+                a.onclick = () => {
+                    sessionStorage.setItem("bookData", JSON.stringify({ id: book.id }));
+                };
+                bookLi.append(a);
+                innerUl.append(bookLi);
+            });
+            
+            genreItem.append(innerUl);
+            booksList.append(genreItem);
+        }
+    });
+}
+
+// Initial check for genre filter from other pages
+window.addEventListener("DOMContentLoaded", async () => {
+    const filter = sessionStorage.getItem("booksFilter");
+    if (filter) {
+        const filterData = JSON.parse(filter);
+        if (filterData.type === "genre") {
+            await fetchAndDisplayBooks(`/api/books?genreId=${filterData.id}`);
+            setText("results-separator", `Books for Genre: ${filterData.name}`);
+        }
+        sessionStorage.removeItem("booksFilter");
+
+}
+});
