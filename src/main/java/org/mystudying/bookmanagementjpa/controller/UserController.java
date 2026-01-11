@@ -26,7 +26,12 @@ public class UserController {
 
 
     @GetMapping
-    public List<UserDto> getAllUsers() {
+    public List<UserDto> getAllUsers(@RequestParam Optional<Long> moreThan) {
+        if (moreThan.isPresent()) {
+            return userService.findUsersWithMoreThanXBooks(moreThan.get()).stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        }
         return userService.findAll().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -51,11 +56,7 @@ public class UserController {
 
     @GetMapping("/{id}/books")
     public List<BookIdTitleYear> getBooksByUser(@PathVariable long id) {
-
-        return userService.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id))
-                .getBooks().stream()
-//                .map(this::toBookDto)
+        return userService.findBooksByUserId(id).stream()
                 .map(BookIdTitleYear::new)
                 .collect(Collectors.toList());
     }
@@ -87,6 +88,17 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void returnBook(@PathVariable long userId, @Valid @RequestBody BookActionRequestDto requestDto) {
         userService.returnBook(userId, requestDto.bookId());
+    }
+
+    @GetMapping("/{id}/bookings")
+    public List<BookingResponseDto> getUserBookings(@PathVariable long id) {
+        return userService.findBookingsByUserId(id);
+    }
+
+    @PostMapping("/{userId}/bookings/{bookingId}/pay")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void payFine(@PathVariable long userId, @PathVariable long bookingId) {
+        userService.payFine(userId, bookingId);
     }
 
     private UserDto toDto(User user) {

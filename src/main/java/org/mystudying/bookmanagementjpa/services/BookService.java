@@ -43,6 +43,7 @@ public class BookService {
     }
 
     public List<Book> findByAuthorId(long authorId) {
+        authorRepository.findById(authorId).orElseThrow(() -> new AuthorNotFoundException(authorId));
         return bookRepository.findByAuthor_Id(authorId);
     }
 

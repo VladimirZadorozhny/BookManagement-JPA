@@ -3,8 +3,6 @@ package org.mystudying.bookmanagementjpa.domain;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import org.mystudying.bookmanagementjpa.exceptions.BookAlreadyBorrowedException;
-import org.mystudying.bookmanagementjpa.exceptions.BookNotBorrowedException;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -27,13 +25,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @ManyToMany
-    @JoinTable(
-        name = "bookings",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "book_id")
-    )
-    private Set<Book> books = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Booking> bookings = new HashSet<>();
 
     protected User() {
         // Required by JPA
@@ -57,20 +50,16 @@ public class User {
         return email;
     }
 
-    public Set<Book> getBooks() {
-        return Collections.unmodifiableSet(books);
+    public Set<Booking> getBookings() {
+        return Collections.unmodifiableSet(bookings);
     }
 
-    public void addBook(Book book) {
-        if (!books.add(book)) {
-            throw new BookAlreadyBorrowedException();
-        }
+    public void addBooking(Booking booking) {
+        this.bookings.add(booking);
     }
 
-    public void removeBook(Book book) {
-        if (!books.remove(book)) {
-            throw new BookNotBorrowedException();
-        }
+    public void removeBooking(Booking booking) {
+        this.bookings.remove(booking);
     }
 
     @Override

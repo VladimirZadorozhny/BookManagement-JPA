@@ -50,9 +50,7 @@ public class AuthorController {
     }
 
     @GetMapping("/{id}/books")
-    public List<BookDto> getBooksByAuthor(@PathVariable long id) {
-        authorService.findById(id)
-                .orElseThrow(() -> new AuthorNotFoundException(id));
+    public List<BookDto> getBooksByAuthorId(@PathVariable long id) {
         return bookService.findByAuthorId(id).stream()
                 .map(this::toBookDto)
                 .collect(Collectors.toList());
