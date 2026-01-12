@@ -423,9 +423,9 @@ public class UserControllerTest {
         String jsonBooksByUser = resultBooksByUser.getResponse().getContentAsString();
         int booksByUser = JsonPath.read(jsonBooksByUser, "$.length()");
 
-//    If our POST request have passed - the rent method is successed and booking was created, but we don't see it in DB yet until transaction ends,
-//        that's why we make artificially "+1" to amount of bookings from DB without flushing, just for testing
-        int initialBookings = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE) + 1;
+//    If our POST request have passed - the rent method is succeeded and booking was created.
+//    We expect the row count to remain the same after return (historical record kept).
+        int initialBookings = JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE);
 
         String returnRequestJson = readJsonFile("rentOrReturnBookRequest.json").replace("1", String.valueOf(rentableBookId));
 
@@ -443,11 +443,21 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.length()").value(booksByUser - 1))
                 .andExpect(jsonPath("$[?(@.id == " + rentableBookId + ")]").isEmpty());
 
-//      etxtra test to see the changes in DB
+//      extra test to see the changes in DB
         entityManager.flush();
-        assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE)).isEqualTo(initialBookings - 1);
-        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE,
-                "user_id = " + rentUserId + " AND book_id = " + rentableBookId)).isEqualTo(0);
+        // Booking should still exist (history), but should be marked returned
+        assertThat(JdbcTestUtils.countRowsInTable(jdbcClient, BOOKINGS_TABLE)).isEqualTo(initialBookings); 
+        
+        // Check that active booking is gone (count of active bookings for this pair is 0)
+        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE, "returned_at IS NULL AND user_id = "
+                        + rentUserId + " AND book_id = " + rentableBookId))
+                .isEqualTo(0);
+
+        // Check that returned booking exists
+        assertThat(JdbcTestUtils.countRowsInTableWhere(jdbcClient, BOOKINGS_TABLE, "returned_at IS NOT NULL AND user_id = "
+                + rentUserId + " AND book_id = " + rentableBookId))
+                .isEqualTo(1);
+
         assertThat(jdbcClient.sql("SELECT available FROM books WHERE id = ?").param(rentableBookId).query(Integer.class).single()).isEqualTo(initialAvailable + 1);
     }
 
@@ -497,26 +507,26 @@ public class UserControllerTest {
     // This cleanup is targeted to undo the specific changes made by the concurrency test,
     // and also to clean up any test records inserted by @Sql.
     private void dbCleanup(long user1Id, long user2Id, long bookId) {
-        // Order of deletion is important due to foreign key constraints
+        // Order: bookings -> book_genres -> books -> authors -> users -> genres
 
-        // First delete bookings created by insertTestRecords.sql or during tests
-        JdbcTestUtils.deleteFromTableWhere(jdbcClient, BOOKINGS_TABLE, "user_id = " + user1Id +
-                " OR user_id = " + user2Id + " OR book_id = " + bookId +
-                " OR user_id = (SELECT id FROM users WHERE email='test1@example.com') " +
-                " OR book_id = (SELECT id FROM books WHERE title='Test Book 1')");
+        // 1. Delete all bookings involving these users or this book
+        jdbcClient.sql("DELETE FROM " + BOOKINGS_TABLE + " WHERE user_id = ? OR user_id = ? OR book_id = ?")
+                .param(user1Id).param(user2Id).param(bookId).update();
 
-        // After delete books created by insertTestRecords.sql or during tests
-        JdbcTestUtils.deleteFromTableWhere(jdbcClient, BOOKS_TABLE,
-                "title IN ('Book For Deletion', 'Rentable Book', 'Test Book 1' , 'Test Book 2')");
+        // 2. Delete all records from insertTestRecords.sql
+        // Clear bookings first
+        jdbcClient.sql("DELETE FROM " + BOOKINGS_TABLE + " WHERE user_id IN (SELECT id FROM " + USERS_TABLE + " WHERE email IN ('delete@example.com', 'rent@example.com', 'test1@example.com', 'test2@example.com'))").update();
+        
+        // Clear book_genres
+        jdbcClient.sql("DELETE FROM book_genres WHERE book_id IN (SELECT id FROM " + BOOKS_TABLE + " WHERE title IN ('Book For Deletion', 'Rentable Book', 'Test Book 1', 'Test Book 2'))").update();
 
-        // Then delete users created by insertTestRecords.sql or during tests
-        JdbcTestUtils.deleteFromTableWhere(jdbcClient, USERS_TABLE,
-                "email IN ('delete@example.com', 'rent@example.com', 'test1@example.com', 'test2@example.com')");
+        // Clear books
+        jdbcClient.sql("DELETE FROM " + BOOKS_TABLE + " WHERE title IN ('Book For Deletion', 'Rentable Book', 'Test Book 1', 'Test Book 2')").update();
 
-        // And finally delete authors created by insertTestRecords.sql or during tests
-        JdbcTestUtils.deleteFromTableWhere(jdbcClient, AUTHORS_TABLE,
-                "name IN ('Author For Deletion', 'Test Author 1', 'Test Author 2')");
-
+        // Clear authors, users, genres
+        jdbcClient.sql("DELETE FROM " + AUTHORS_TABLE + " WHERE name IN ('Author For Deletion', 'Test Author 1', 'Test Author 2')").update();
+        jdbcClient.sql("DELETE FROM " + USERS_TABLE + " WHERE email IN ('delete@example.com', 'rent@example.com', 'test1@example.com', 'test2@example.com')").update();
+        jdbcClient.sql("DELETE FROM genres WHERE name IN ('Test Genre 1', 'Test Genre 2', 'Test Genre 3')").update();
     }
 
     @Test

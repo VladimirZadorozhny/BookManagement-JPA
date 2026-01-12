@@ -95,6 +95,9 @@ public class AuthorControllerTest {
     @Test
     void createAuthorReturnsCreatedAuthor() throws Exception {
         long initialRowCount = JdbcTestUtils.countRowsInTable(jdbcClient, AUTHORS_TABLE);
+        long maxId = jdbcClient.sql("select max(id) from authors")
+                .query(Long.class)
+                .single();
         String newAuthorJson = readJsonFile("correctAuthor.json");
 
         mockMvc.perform(post("/api/authors")
@@ -102,6 +105,7 @@ public class AuthorControllerTest {
                         .content(newAuthorJson))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.id").value(maxId + 1))
                 .andExpect(jsonPath("$.name").value("New Author From Test"))
                 .andExpect(jsonPath("$.birthdate").value("1980-01-01"));
 
@@ -189,6 +193,7 @@ public class AuthorControllerTest {
 
     @Test
     void deleteAuthorReturnsConflictIfAuthorHasBooks() throws Exception {
+        // The Book For Deletion is linked to Author For Deletion
         long authorIdToDelete = idOfAuthorForDeletion();
 
         long initialRowCount = JdbcTestUtils.countRowsInTable(jdbcClient, AUTHORS_TABLE);
