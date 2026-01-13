@@ -273,7 +273,7 @@ async function rentBookToUser(userId, userName) {
             window.location.href = "user.html";
         } else {
             const errorData = await response.json();
-            await showModal("Error", `Rent failed: ${errorData.message}`);
+            await showModal("Error", `Rent failed: ${errorData.message} \nYou must return overdue books first and pay all fines.`);
             sessionStorage.removeItem("pendingAction");
         }
     } catch (error) {

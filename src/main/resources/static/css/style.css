@@ -408,3 +408,64 @@ footer {
 .hidden {
     display: none;
 }
+
+/* Booking Status Styles */
+.booking-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    background-color: #fff;
+    flex-wrap: wrap;
+}
+
+.booking-info {
+    flex: 1;
+    min-width: 250px;
+}
+
+.booking-actions {
+    margin-left: 15px;
+}
+
+.status-overdue {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.status-near-due {
+    font-weight: bold;
+}
+
+.btn-return-overdue {
+    background-color: #dc3545 !important;
+}
+
+.btn-return-near-due {
+    background-color: #ffc107 !important;
+    color: #212529 !important;
+    border: 1px solid #e0a800 !important;
+}
+
+.btn-pay-fine {
+    background-color: #dc3545 !important;
+}
+
+.booking-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 5px;
+}
+
+.booking-title a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+.booking-details {
+    font-size: 0.95em;
+    color: #495057;
+}

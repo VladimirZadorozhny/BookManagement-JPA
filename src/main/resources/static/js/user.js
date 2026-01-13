@@ -99,78 +99,180 @@ import { byId, show, hide, setText, showModal } from "./util.js";
     }
 
     async function fetchAndDisplayBorrowedBooks() {
-
-        borrowedBooksList.innerHTML = ""; // Clear previous results
+        borrowedBooksList.innerHTML = "";
 
         try {
-            const response = await fetch(`/api/users/${userId}/books`);
+            const response = await fetch(`/api/users/${userId}/bookings`);
             if (response.ok) {
-                const books = await response.json();
+                let bookings = await response.json();
 
-                if (books.length === 0) {
-                    borrowedBooksList.innerHTML = "<li>This user has no borrowed books.</li>";
+                // Show only active bookings OR bookings with unpaid fines.
+                bookings = bookings.filter(b => !b.returnedAt || (b.fine > 0 && !b.finePaid));
+
+                if (bookings.length === 0) {
+                    borrowedBooksList.innerHTML = "<li>This user has no active bookings or unpaid fines.</li>";
                 } else {
-                    for (const book of books) {
+                    // Sort by borrowed date desc
+                    bookings.sort((a, b) => new Date(b.borrowedAt) - new Date(a.borrowedAt));
+
+                    for (const booking of bookings) {
                         const li = document.createElement("li");
-                        // Link to book details page
-                        const a = document.createElement("a");
-                        a.href = "book.html";
-                        a.innerText = `${book.title} (Year: ${book.year})`;
-                        a.onclick = () => sessionStorage.setItem("bookId", book.id);
-                        li.append(a);
+                        li.className = "booking-item";
 
-                        // Add Return button
-                        const returnButton = document.createElement("button");
-                        returnButton.innerText = "Return";
-                        returnButton.className = "side-button"; // Reuse button style
-                        returnButton.addEventListener('click', async () => await returnBook(book.id));
-                        li.append(returnButton);
+                        // Date normalization to midnight for day-based comparison
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const dueDate = new Date(booking.dueAt);
+                        dueDate.setHours(0, 0, 0, 0);
 
-                        borrowedBooksList.append(li);
+                        const diffTime = dueDate - today;
+                        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                        const isReturned = !!booking.returnedAt;
+                        const isOverdue = !isReturned && diffDays < 0;
+                        const isNearDue = !isReturned && diffDays >= 0 && diffDays <= 3;
+
+                        // Info Section
+                        const infoDiv = document.createElement("div");
+                        infoDiv.className = "booking-info";
+
+                        const titleDiv = document.createElement("div");
+                        titleDiv.className = "booking-title";
+                        const titleLink = document.createElement("a");
+                        titleLink.href = "book.html";
+                        titleLink.innerText = `${booking.bookTitle} (${booking.bookYear})`;
+                        titleLink.onclick = () => sessionStorage.setItem("bookId", booking.bookId);
+                        titleDiv.appendChild(titleLink);
+                        infoDiv.appendChild(titleDiv);
+
+                        const detailsDiv = document.createElement("div");
+                        detailsDiv.className = "booking-details";
+
+                        // Borrowed Date
+                        const bDate = new Date(booking.borrowedAt).toLocaleDateString();
+                        detailsDiv.innerHTML += `<div>Borrowed: ${bDate}</div>`;
+
+                        // Due Date Styling
+                        let dueClass = "";
+                        if (isOverdue) dueClass = "status-overdue";
+                        else if (isNearDue) dueClass = "status-near-due";
+                        
+                        detailsDiv.innerHTML += `<div class="${dueClass}">Due: ${new Date(booking.dueAt).toLocaleDateString()}</div>`;
+
+                        if (!isReturned) {
+                            detailsDiv.innerHTML += `<div class="${dueClass}">Days left: ${diffDays}</div>`;
+                        } else {
+                            const returnedDate = new Date(booking.returnedAt).toLocaleDateString();
+                            detailsDiv.innerHTML += `<div class="status-overdue">Returned: ${returnedDate}</div>`;
+                        }
+
+                        if (booking.fine > 0) {
+                            detailsDiv.innerHTML += `<div class="status-overdue">Fine: $${booking.fine.toFixed(2)}</div>`;
+                        }
+
+                        infoDiv.appendChild(detailsDiv);
+                        li.appendChild(infoDiv);
+
+                        // Actions Section
+                        const actionDiv = document.createElement("div");
+                        actionDiv.className = "booking-actions";
+
+                        if (!isReturned) {
+                            const btn = document.createElement("button");
+                            btn.innerText = "Return";
+                            btn.className = "side-button";
+                            btn.style.width = "auto";
+                            if (isOverdue) btn.classList.add("btn-return-overdue");
+                            else if (isNearDue) btn.classList.add("btn-return-near-due");
+                            
+                            btn.onclick = async () => await handleReturnClick(booking);
+                            actionDiv.appendChild(btn);
+                        } else {
+                            const payBtn = document.createElement("button");
+                            payBtn.innerText = "Pay fines";
+                            payBtn.className = "side-button btn-pay-fine";
+                            payBtn.style.width = "auto";
+                            payBtn.onclick = async () => await payBookingFine(booking.id);
+                            actionDiv.appendChild(payBtn);
+                        }
+
+                        li.appendChild(actionDiv);
+                        borrowedBooksList.appendChild(li);
                     }
                 }
                 show(borrowedBooksSection.id);
             } else {
-                await showModal("Error", "Error loading borrowed books.");
-                show(borrowedBooksSection.id);
+                await showModal("Error", "Error loading bookings.");
             }
         } catch (error) {
-            await showModal("Error", "A network error occurred while fetching borrowed books.");
-            show(borrowedBooksSection.id);
+            console.error(error);
+            await showModal("Error", "Network error occurred.");
         }
     }
 
-    // --- Return Book Function ---
-    async function returnBook(bookId) {
-        const confirmed = await showModal("Confirm Return", "Are you sure you want to return this book?", [
-            { text: "Yes, Return", class: "btn-primary", value: true },
-            { text: "Cancel", class: "btn-secondary", value: false }
-        ]);
+    // --- Handle Return Logic ---
+    async function handleReturnClick(booking) {
 
-        if (!confirmed) {
-            return; // User cancelled
+        if (booking.fine > 0) {
+            const confirmed = await showModal("Overdue Return", 
+                `This book is overdue. \nEstimated Fine: $${booking.fine.toFixed(2)}. \n\nYou can return the book now. The fine will be recorded on your account.`, 
+                [
+                    { text: "Return Book", class: "btn-primary", value: true },
+                    { text: "Cancel", class: "btn-secondary", value: false }
+                ]
+            );
+
+            if (confirmed === true) {
+                await processReturn(booking.bookId);
+            }
+        } else {
+            const confirmed = await showModal("Confirm Return", "Are you sure you want to return this book?", [
+                { text: "Yes, Return", class: "btn-primary", value: true },
+                { text: "Cancel", class: "btn-secondary", value: false }
+            ]);
+            if (confirmed === true) {
+                await processReturn(booking.bookId);
+            }
         }
+    }
 
-        const returnRequest = {
-            bookId: bookId
-        };
-
+    // --- Process Return API Call ---
+    async function processReturn(bookId) {
         try {
             const response = await fetch(`/api/users/${userId}/return`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(returnRequest)
+                body: JSON.stringify({ bookId: bookId })
             });
 
             if (response.ok) {
                 await showModal("Success", "Book returned successfully!");
-                await fetchAndDisplayBorrowedBooks(); // Refresh the list
+                await fetchAndDisplayBorrowedBooks(); // Refresh list
             } else {
                 const errorData = await response.json();
                 await showModal("Error", `Return failed: ${errorData.message}`);
             }
         } catch (error) {
-            await showModal("Error", "A network error occurred during the return process.");
+            await showModal("Error", "Network error during return.");
+        }
+    }
+
+    // --- Pay Fine API Call ---
+    async function payBookingFine(bookingId) {
+        try {
+            const response = await fetch(`/api/users/${userId}/bookings/${bookingId}/pay`, {
+                method: "POST"
+            });
+
+            if (response.ok) {
+                await showModal("Success", "Fine paid successfully!");
+                await fetchAndDisplayBorrowedBooks();
+            } else {
+                const errorData = await response.json();
+                await showModal("Error", `Payment failed: ${errorData.message}`);
+            }
+        } catch (error) {
+            await showModal("Error", "Network error during payment.");
         }
     }
 

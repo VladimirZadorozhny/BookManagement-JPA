@@ -26,12 +26,7 @@ public class UserController {
 
 
     @GetMapping
-    public List<UserDto> getAllUsers(@RequestParam Optional<Long> moreThan) {
-        if (moreThan.isPresent()) {
-            return userService.findUsersWithMoreThanXBooks(moreThan.get()).stream()
-                    .map(this::toDto)
-                    .collect(Collectors.toList());
-        }
+    public List<UserDto> getAllUsers() {
         return userService.findAll().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -54,6 +49,12 @@ public class UserController {
                 .orElseThrow(() -> new UserNotFoundException(by));
     }
 
+    /**
+     * @deprecated Since introduction of Booking entity.
+     * Use BookingRepository instead.
+     * Kept temporarily to avoid breaking existing tests.
+     */
+    @Deprecated
     @GetMapping("/{id}/books")
     public List<BookIdTitleYear> getBooksByUser(@PathVariable long id) {
         return userService.findBooksByUserId(id).stream()

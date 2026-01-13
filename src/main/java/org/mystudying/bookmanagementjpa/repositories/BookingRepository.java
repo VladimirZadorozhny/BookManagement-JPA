@@ -17,7 +17,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     
     List<Booking> findByBookId(Long bookId);
     
-    @Query("SELECT b FROM Booking b WHERE b.user.id = :userId AND b.book.id = :bookId AND b.returnedAt IS NULL")
+    @Query("SELECT b FROM Booking b JOIN FETCH b.book WHERE b.user.id = :userId")
+    List<Booking> findAllByUserIdWithBooks(@Param("userId") Long userId);
+
+    @Query("SELECT b FROM Booking b JOIN FETCH b.book WHERE b.user.id = :userId AND b.returnedAt IS NULL")
+    List<Booking> findActiveBookingsWithBooksByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT b FROM Booking b JOIN FETCH b.book WHERE b.user.id = :userId AND b.book.id = :bookId AND b.returnedAt IS NULL")
     Optional<Booking> findActiveBooking(@Param("userId") Long userId, @Param("bookId") Long bookId);
 
     @Query("SELECT b FROM Booking b WHERE b.returnedAt IS NULL AND b.dueAt < :date")

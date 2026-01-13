@@ -54,17 +54,22 @@ public class UserService {
         return userRepository.findByEmail(email);
     }
 
+    /**
+     * @deprecated Since introduction of Booking entity.
+     * Use BookingRepository instead.
+     * Kept temporarily to avoid breaking existing tests.
+     */
+    @Deprecated
     public List<Book> findBooksByUserId(long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
-        return user.getBookings().stream()
-                .filter(b -> b.getReturnedAt() == null)
+        return bookingRepository.findActiveBookingsWithBooksByUserId(userId).stream()
                 .map(Booking::getBook)
                 .collect(Collectors.toList());
     }
 
     public List<BookingResponseDto> findBookingsByUserId(long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
-        return user.getBookings().stream()
+        return bookingRepository.findAllByUserIdWithBooks(userId).stream()
                 .sorted((b1, b2) -> {
                     if (b1.getReturnedAt() == null && b2.getReturnedAt() != null) return -1;
                     if (b1.getReturnedAt() != null && b2.getReturnedAt() == null) return 1;
@@ -77,8 +82,8 @@ public class UserService {
                     }
                     return new BookingResponseDto(
                             b.getId(),
-                            b.getUser().getId(),
-                            b.getUser().getName(),
+                            user.getId(),
+                            user.getName(),
                             b.getBook().getId(),
                             b.getBook().getTitle(),
                             b.getBook().getYear(),
