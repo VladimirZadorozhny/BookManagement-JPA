@@ -81,6 +81,18 @@ async function fetchAuthorDetails() {
             currentAuthorData = await response.json();
             setText("name", currentAuthorData.name);
             setText("birthdate", currentAuthorData.birthdate);
+            const booksSpan = byId("showAll");
+                        booksSpan.innerHTML = "";
+                        const a = document.createElement("a");
+                        a.href = "#";
+                        a.innerText = "Show all author's books";
+                        a.onclick = async (e) => {
+                          e.preventDefault();
+                          sessionStorage.setItem("booksFilter", JSON.stringify({ type: "author", authorId: currentAuthorData.id,
+                           authorName: currentAuthorData.name}));
+                          window.location.href = "books.html";
+                        }
+                        booksSpan.appendChild(a);
             showStaticDetails();
         } else {
             await showModal("Not found", `Author with ID ${authorId} not found.`);

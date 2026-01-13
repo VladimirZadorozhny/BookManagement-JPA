@@ -113,6 +113,29 @@ async function fetchBookDetails() {
             setText("title", currentBookData.title);
             setText("year", currentBookData.year);
             setText("author", currentBookData.authorName || "Unknown");
+            
+            // Display genres
+            const genresSpan = byId("genres");
+            genresSpan.innerHTML = "";
+            if (currentBookData.genres && currentBookData.genres.length > 0) {
+                currentBookData.genres.forEach((genreName, index) => {
+                    const a = document.createElement("a");
+                    a.href = "#";
+                    a.innerText = genreName;
+                    a.onclick = async (e) => {
+                        e.preventDefault();
+                          sessionStorage.setItem("booksFilter", JSON.stringify({ type: "genre", name: genreName }));
+                            window.location.href = "books.html";
+                            }
+                      genresSpan.appendChild(a);
+                    if (index < currentBookData.genres.length - 1) {
+                        genresSpan.appendChild(document.createTextNode(", "));
+                    }
+                })
+            } else {
+                genresSpan.innerText = "None";
+            }
+
             setText("available", Number(currentBookData.available) > 0 ? "Yes" : "No");
 
             rentButton.disabled = !currentBookData.available;

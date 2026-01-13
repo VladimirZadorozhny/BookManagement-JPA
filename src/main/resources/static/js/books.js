@@ -379,9 +379,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (filter) {
         const filterData = JSON.parse(filter);
         if (filterData.type === "genre") {
-            await fetchAndDisplayBooks(`/api/books?genreId=${filterData.id}`);
+            await fetchAndDisplayBooks(`/api/genres/name/${encodeURIComponent(filterData.name)}/books`);
             setText("results-separator", `Books for Genre: ${filterData.name}`);
         }
+        if (filterData.type === "author") {
+                    await fetchAndDisplayBooks(`/api/authors/${filterData.authorId}/books`);
+                    setText("results-separator", `Books of Author: ${filterData.authorName}`);
+                }
         sessionStorage.removeItem("booksFilter");
 
 }

@@ -37,7 +37,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @Query("SELECT b FROM Book b WHERE b.id = :id")
     Optional<Book> findAndLockById(@Param("id") long id);
 
-    @Query("SELECT new BookDetailDto(b.id, b.title, b.year, b.available, a.name, a.id) " +
+    @Query("SELECT new org.mystudying.bookmanagementjpa.dto.BookDetailDto(b.id, b.title, b.year, b.available, a.name, a.id) " +
            "FROM Book b JOIN b.author a WHERE b.id = :id")
     Optional<BookDetailDto> findBookDetailsById(@Param("id") long id);
 
