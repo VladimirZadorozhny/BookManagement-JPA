@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports (Admin)</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/reports.js" type="module"></script>
+</head>
+<body>
+    <header>
+        <h1>Admin Reports</h1>
+    </header>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="books.html">Books</a></li>
+            <li><a href="authors.html">Authors</a></li>
+            <li><a href="users.html">Users</a></li>
+            <li><a href="reports.html">Reports</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <aside class="sidebar">
+            <nav class="side-nav">
+                <h3>Report Types</h3>
+                <button id="show-all" class="side-button">All Bookings</button>
+                <button id="show-active" class="side-button">Active Bookings</button>
+                <button id="show-returned" class="side-button">Returned Bookings</button>
+<!--                <button id="show-overdue" class="side-button">Overdue Bookings</button>-->
+                <button id="show-due-soon" class="side-button">Due Soon</button>
+                <button id="show-fines" class="side-button">History of Fines</button>
+                <button id="show-unpaid-fines" class="side-button">Unpaid Fines</button>
+                <button id="show-heavy-users" class="side-button">Users with more than "X" Books</button>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <h2 id="report-title">Select a Report</h2>
+            
+            <!-- Filter Inputs (Initially Hidden) -->
+            <div id="heavy-users-filter-box" class="hidden filter-box">
+                <form id="heavy-users-form">
+                    <label for="heavy-users-count">Show bookings for users with more than </label>
+                    <input type="number" id="heavy-users-count" min="1" value="2" class="filter-input-number">
+                    <span> active books.</span>
+                    <button type="submit" class="side-button btn-inline">Apply</button>
+                </form>
+            </div>
+            <div id="due-soon-filter-box" class="hidden filter-box">
+                <form id="due-soon-form">
+                    <label for="due-soon-days">Show active bookings due in the next </label>
+                    <input type="number" id="due-soon-days" min="1" value="3" class="filter-input-number">
+                    <span> days.</span>
+                    <button type="submit" class="side-button btn-inline">Apply</button>
+                </form>
+            </div>
+
+            <div id="report-content">
+                <p>Please select a report from the sidebar.</p>
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="pagination-controls" class="hidden pagination-box">
+                <button id="prev-page" class="side-button btn-pagination">Previous</button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-page" class="side-button btn-pagination">Next</button>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>&copy; 2025 Book Management Application</p>
+    </footer>
+
+    <!-- Generic Modal -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-content">
+            <h3 id="modal-title"></h3>
+            <p id="modal-message"></p>
+            <div id="modal-buttons"></div>
+        </div>
+    </div>
+</body>
+</html>

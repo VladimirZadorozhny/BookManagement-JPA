@@ -38,6 +38,11 @@ public class UserService {
         return userRepository.findAll(Sort.by("name"));
     }
 
+    /**
+     * @deprecated Since introduction of Booking entity.
+     * Use BookingRepository instead.
+     * Kept temporarily to avoid breaking existing tests.
+     */
     public List<User> findUsersWithMoreThanXBooks(long count) {
         return userRepository.findUsersWithMoreThanXBooks(count);
     }
