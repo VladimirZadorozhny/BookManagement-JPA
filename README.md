@@ -1,162 +1,240 @@
-# Book Management Web Application - Pet Project
+# Book Management Application (Spring Boot + JPA)
 
-A full-stack Spring Boot and vanilla JavaScript application that provides a web-based UI for a "books market" (library). This project evolved from a console-based application to a modern web app with a RESTful backend and a dynamic, interactive frontend. It is built as a study/practice application to demonstrate a simple layered design, REST API principles, and manual frontend state management.
+A full-stack **Spring Boot + JPA** pet project with a **vanilla JavaScript frontend** that models a real-world library / book-renting system.
+The application evolved through multiple architectural stages (Console → Web → JDBC → JPA) and now focuses on **correct domain modeling, performance-aware JPA usage, and clean REST design**.
 
----
-
-### Features
-
--   **Full-Stack CRUD:** Complete Create, Read, Update, and Delete operations for Books, Authors, and Users.
--   **Interactive Web UI:** A clean, responsive frontend built with vanilla JavaScript, HTML, and CSS. No frameworks were used on the frontend, demonstrating manual DOM manipulation and state management.
--   **Dynamic Filtering and Searching:** The UI allows users to dynamically list and filter entities, such as finding books by title, author name, or year.
--   **Book Renting/Returning Workflow:** A complete workflow allows users to rent available books and return them, with the UI guiding the user through the process.
--   **Robust Error Handling:** The backend provides specific, user-friendly error messages (e.g., "Cannot delete an author who has books") that are displayed in a custom modal on the frontend.
--   **Client-Side Validation:** Forms include client-side validation to provide immediate feedback to the user.
--   **Efficient Backend:** The backend uses DTOs and optimized queries (`BookDetailDto`) to ensure efficient data transfer.
--   **Robust Concurrency Handling:** The booking system (rent/return) is designed to ensure data integrity under concurrent access scenarios, with specific integration tests to verify its behavior.
-
-### Tech Stack
-
--   **Backend:**
-    -   Java 17 & Spring Boot 3.x
-    -   Spring Web (for REST APIs)
-    -   Spring Data JDBC (`JdbcClient`) - no ORM
-    -   Flyway (for database migrations)
-    -   MySQL 8.x (via Docker)
-    -   Maven (for dependency management)
--   **Frontend:**
-    -   Vanilla JavaScript (ES6 Modules)
-    -   HTML5
-    -   CSS3
--   **Testing:**
-    -   JUnit 5 & Mockito
-    -   Spring Boot Test (`@SpringBootTest` with `MockMvc`) for controller integration tests, including specialized tests for concurrency.
+This project is intentionally **not over-simplified**: it contains real-life concerns such as booking workflows, overdue handling, fines, reporting, pagination, and N+1 query prevention.
 
 ---
 
-### Project Layout
+## Key Goals of the Project
+
+* Practice **Spring Boot + JPA** in a realistic domain
+* Learn **fetch strategies**, `JOIN FETCH`, pagination, and N+1 avoidance
+* Build a **non-framework frontend** with explicit state handling
+* Design a system that remains **testable and evolvable**
+* Simulate real backend complexity (reports, aggregates, workflows)
+
+---
+
+## Features
+
+### Core Domain
+
+* **Books, Authors, Genres, Users** (full CRUD)
+* **Booking system** instead of direct user–book relations
+* Explicit **rent / return workflow**
+* Support for:
+
+    * due dates
+    * overdue detection
+    * fines & fine payment
+
+### Booking & Business Logic
+
+* Rent only if book is available
+* Prevent renting if user has unpaid fines or overdue books
+* Calculate overdue days and fines dynamically
+* Keep booking history (active + returned)
+
+### Admin / Reporting
+
+* Booking reports with pagination:
+
+    * all bookings
+    * active bookings
+    * returned bookings
+    * overdue & due-soon bookings
+    * bookings with fines / unpaid fines
+    * "heavy users" (users with more than X active bookings)
+* Efficient queries using **JOIN FETCH + count queries**
+
+### Frontend
+
+* Pure **vanilla JavaScript (ES modules)**
+* Manual DOM updates & state handling
+* Filter panels and paginated tables
+* Visual status indicators (overdue, near-due, unpaid fines)
+* Custom modal dialogs for confirmations & errors
+
+### Performance & Data Access
+
+* DTO-based API design
+* No lazy-loading surprises in controllers
+* Explicit fetch strategies for each use case
+* Final **N+1 sanity pass completed** across the application
+
+---
+
+## Tech Stack
+
+### Backend
+
+* Java 17
+* Spring Boot 3.x
+* Spring Web (REST API)
+* Spring Data JPA (Hibernate)
+* Flyway (DB migrations + repeatable seed scripts)
+* MySQL 8 (Docker)
+* Maven
+
+### Frontend
+
+* HTML5
+* CSS3
+* Vanilla JavaScript (ES6 modules)
+
+### Testing
+
+* JUnit 5
+* Mockito
+* Spring Boot Test
+* MockMvc
+* Integration tests for booking logic
+
+---
+
+## Project Structure
 
 ```
 src/main/
-├─ java/org/mystudying/bookmanagementweb/
-│  ├─ controller/  # REST API controllers and GlobalExceptionHandler
-│  ├─ domain/      # Plain domain objects: User, Author, Book, Booking
-│  ├─ dto/         # Data Transfer Objects for API communication
-│  ├─ exceptions/  # Custom business logic exceptions
-│  ├─ repositories/ # SQL + JdbcClient for database access
-│  └─ services/     # Business logic + transactions
+├─ java/org/mystudying/bookmanagementjpa/
+│  ├─ controller/      # REST controllers
+│  ├─ domain/          # JPA entities (Book, Author, Genre, User, Booking)
+│  ├─ dto/             # API DTOs (requests + responses)
+│  ├─ exception/       # Custom business exceptions + handlers
+│  ├─ repository/      # Spring Data JPA repositories
+│  └─ service/         # Transactional business logic
 └─ resources/
-   ├─ application.properties # Main application configuration
-   ├─ db/migration/         # Flyway SQL migrations (V1_*, V2_*)
-   └─ static/               # Frontend source files (HTML, CSS, JS)
+   ├─ application.properties
+   ├─ db/migration/    # Flyway versioned & repeatable scripts
+   └─ static/          # Frontend (HTML, CSS, JS)
+
 pom.xml
 docker-compose.yml
 ```
 
 ---
 
-### How to Run the Application
+## Running the Application
 
-#### Option A — Run with Docker Compose (recommended)
+### Option A — Docker (recommended)
 
-1.  **Start MySQL in Docker:**
-    ```bash
-    docker compose up -d
-    ```
-    This creates a `booksmarket` database with user "user1" and password "user1" on port `3307`.
+1. Start MySQL:
 
-2.  **Run the Spring Boot application (from project root):**
-    You can use the Maven wrapper included with the project.
-
-    *   On Linux/macOS or Windows PowerShell:
-        ```bash
-        ./mvnw spring-boot:run
-        ```
-    *   On Windows CMD:
-        ```bash
-        mvnw.cmd spring-boot:run
-        ```
-    The application will connect to the MySQL instance running in Docker. Flyway will automatically run migrations and seed data on the first start.
-
-3.  **Access the Web Application:**
-    Once the backend is running, open your web browser and navigate to:
-    **[http://localhost:8080](http://localhost:8080)**
-
-To stop the database:
 ```bash
-      docker compose down
+docker compose up -d
 ```
 
-#### Option B — Run against your local MySQL
+2. Run the application:
 
-1.  **Create a database named `booksmarket`** (or choose another name and adjust the URL).
-
-2.  **Set connection parameters** (recommended via environment variables):
-
-    *   Windows PowerShell:
-        ```powershell
-        $env:DB_URL="jdbc:mysql://localhost:3307/booksmarket"
-        $env:DB_USER="user1"
-        $env:DB_PASSWORD="user1"
-        ```
-    
-3.  **Run the Spring Boot application:**
-    You can use the Maven wrapper included with the project.
-
-    *   On Linux/macOS or Windows PowerShell:
-        ```bash
-        ./mvnw spring-boot:run
-        ```
-    *   On Windows CMD:
-        ```bash
-        mvnw.cmd spring-boot:run
-        ```
-    Flyway will automatically create tables and insert demo data on the first run.
-
----
-
-### API Endpoints
-
-The application exposes the following RESTful API endpoints:
-
-#### Books (`/api/books`)
-- `GET /`: Lists all books. Supports query parameters for filtering (e.g., `?year=2020`, `?title=...`, `?available=true`).
-- `GET /{id}`: Retrieves a single book by its ID.
-- `GET /{id}/details`: Retrieves aggregated book details (including author name and availability boolean).
-- `POST /`: Creates a new book.
-- `PUT /{id}`: Updates an existing book.
-- `DELETE /{id}`: Deletes a book.
-
-#### Authors (`/api/authors`)
-- `GET /`: Lists all authors.
-- `GET /{id}`: Retrieves a single author.
-- `POST /`: Creates a new author.
-- `PUT /{id}`: Updates an existing author.
-- `DELETE /{id}`: Deletes an author.
-
-#### Users (`/api/users`)
-- `GET /`: Lists all users.
-- `GET /{id}`: Retrieves a single user.
-- `POST /`: Creates a new user.
-- `PUT /{id}`: Updates an existing user.
-- `DELETE /{id}`: Deletes a user.
-
-#### Booking Actions
-- `POST /api/users/{id}/rent`: Rents a book to a specific user.
-- `POST /api/users/{id}/return`: Returns a book from a specific user.
-
----
-
-### Running Tests
-
-To run the backend integration tests, use the following command:
 ```bash
-    # On Linux/macOS or Windows PowerShell:
-      ./mvnw test
-
-    # On Windows CMD:
-      mvnw.cmd test
+./mvnw spring-boot:run
 ```
-Tests expect a running MySQL instance (e.g., started with `docker compose up -d`).
+
+3. Open browser:
+
+```
+http://localhost:8080
+```
+
+Flyway will automatically create the schema and insert demo data.
+
+To stop:
+
+```bash
+docker compose down
+```
 
 ---
+
+### Option B — Local MySQL
+
+Set environment variables:
+
+```bash
+DB_URL=jdbc:mysql://localhost:3307/booksmarket
+DB_USER=user1
+DB_PASSWORD=user1
+```
+
+Then run:
+
+```bash
+./mvnw spring-boot:run
+```
+
+---
+
+## REST API Overview
+
+### Books (`/api/books`)
+
+* `GET /api/books`
+* `GET /api/books/{id}`
+* `POST /api/books`
+* `PUT /api/books/{id}`
+* `DELETE /api/books/{id}`
+
+### Authors (`/api/authors`)
+
+* Standard CRUD endpoints
+
+### Genres (`/api/genres`)
+
+* List genres
+* Retrieve books by genre (optimized fetch)
+
+### Users (`/api/users`)
+
+* CRUD operations
+* Booking-related actions
+
+### Booking Actions
+
+* `POST /api/users/{id}/rent`
+* `POST /api/users/{id}/return`
+* `POST /api/users/{id}/bookings/{bookingId}/pay`
+
+### Reports (`/api/reports/bookings`)
+
+* Supports pagination and multiple report types via query params
+
+---
+
+## Testing
+
+Run all tests:
+
+```bash
+./mvnw test
+```
+
+Tests expect a running MySQL instance (Docker recommended).
+
+---
+
+## Project Status & Roadmap
+
+**Current state:** Feature-complete, performance-stable, test-passing baseline.
+
+Planned future phases:
+
+* Authentication & Roles (Spring Security)
+* Swagger / OpenAPI documentation
+* Environment-based profiles
+* Email notifications
+* Further report refinements
+* Possible microservice split (Docker / Kubernetes)
+
+---
+
+## Author
+
+**Volodymyr Zadorozhnyi**
+
+Junior Java Backend Developer
+
+(Spring Boot • JPA • SQL • Docker)
+
+This project represents a continuous learning journey and a realistic backend portfolio piece.
