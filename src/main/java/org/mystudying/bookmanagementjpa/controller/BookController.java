@@ -105,7 +105,7 @@ public class BookController {
     }
 
     private BookDto toDto(Book book) {
-        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable());
+        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAvailable());
     }
 }
 

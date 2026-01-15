@@ -31,3 +31,6 @@ public class BookingController {
         return bookingService.getBookingReport(type, days, minActiveBooks, pageable);
     }
 }
+
+
+// TODO: Add integration tests for booking reports after Roles/Auth will be implemented

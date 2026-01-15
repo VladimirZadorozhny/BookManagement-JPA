@@ -17,6 +17,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * Use BookingRepository instead.
      * Kept temporarily to avoid breaking existing tests.
      */
+    @Deprecated
     @Query("SELECT u FROM User u JOIN u.bookings b WHERE b.returnedAt IS NULL GROUP BY u.id HAVING COUNT(b.id) > :count")
     List<User> findUsersWithMoreThanXBooks(@Param("count") long count);
+
+
+    @Query("""
+            SELECT DISTINCT u FROM User u LEFT JOIN FETCH u.bookings b WHERE u.id = :id
+            """)
+    Optional<User> findUserByIdWithBookings(@Param("id") long id);
 }

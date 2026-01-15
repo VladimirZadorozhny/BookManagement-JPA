@@ -47,7 +47,6 @@ public class GenreService {
                         book.getId(),
                         book.getTitle(),
                         book.getYear(),
-                        book.getAuthor().getId(),
                         book.getAvailable()
                         ))
                 .toList();
@@ -63,7 +62,6 @@ public class GenreService {
                                         book.getId(),
                                         book.getTitle(),
                                         book.getYear(),
-                                        book.getAuthor().getId(),
                                         book.getAvailable()
                                 ))
                                 .toList()
@@ -75,7 +73,7 @@ public class GenreService {
         genreRepository.findById(id)
                 .orElseThrow(() -> new GenreNotFoundException(id));
         return bookRepository.findByGenres_Id(id).stream()
-                .map(book -> new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable()))
+                .map(book -> new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAvailable()))
                 .collect(Collectors.toList());
     }
 }

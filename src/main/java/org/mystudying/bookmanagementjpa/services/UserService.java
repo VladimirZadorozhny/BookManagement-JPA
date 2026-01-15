@@ -43,6 +43,7 @@ public class UserService {
      * Use BookingRepository instead.
      * Kept temporarily to avoid breaking existing tests.
      */
+    @Deprecated
     public List<User> findUsersWithMoreThanXBooks(long count) {
         return userRepository.findUsersWithMoreThanXBooks(count);
     }
@@ -65,7 +66,7 @@ public class UserService {
      * Kept temporarily to avoid breaking existing tests.
      */
     @Deprecated
-    public List<Book> findBooksByUserId(long userId) {
+    public List<Book> findActiveBorrowedBooksByUserId(long userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
         return bookingRepository.findActiveBookingsWithBooksByUserId(userId).stream()
                 .map(Booking::getBook)
@@ -149,7 +150,7 @@ public class UserService {
 
     @Transactional
     public void rentBook(long userId, long bookId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+        User user = userRepository.findUserByIdWithBookings(userId).orElseThrow(() -> new UserNotFoundException(userId));
         Book book = bookRepository.findAndLockById(bookId).orElseThrow(() -> new BookNotFoundException(bookId));
 
         if (bookingRepository.findActiveBooking(userId, bookId).isPresent()) {

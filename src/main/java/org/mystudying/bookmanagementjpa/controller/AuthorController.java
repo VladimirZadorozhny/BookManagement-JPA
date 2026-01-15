@@ -81,7 +81,7 @@ public class AuthorController {
     }
 
     private BookDto toBookDto(Book book) {
-        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable());
+        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAvailable());
     }
 }
 

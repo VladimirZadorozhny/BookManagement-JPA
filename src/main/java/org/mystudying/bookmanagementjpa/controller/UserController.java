@@ -56,9 +56,9 @@ public class UserController {
      */
     @Deprecated
     @GetMapping("/{id}/books")
-    public List<BookIdTitleYear> getBooksByUser(@PathVariable long id) {
-        return userService.findBooksByUserId(id).stream()
-                .map(BookIdTitleYear::new)
+    public List<BookDto> getBooksByUser(@PathVariable long id) {
+        return userService.findActiveBorrowedBooksByUserId(id).stream()
+                .map(this::toBookDto)
                 .collect(Collectors.toList());
     }
 
@@ -107,13 +107,7 @@ public class UserController {
     }
     
     private BookDto toBookDto(Book book) {
-        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAuthor().getId(), book.getAvailable());
-    }
-
-    private record BookIdTitleYear(long id, String title, int year) {
-        BookIdTitleYear(Book book) {
-            this(book.getId(), book.getTitle(), book.getYear());
-        }
+        return new BookDto(book.getId(), book.getTitle(), book.getYear(), book.getAvailable());
     }
 }
 
